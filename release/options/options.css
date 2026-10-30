@@ -1,0 +1,109 @@
+:root {
+  color-scheme: dark;
+  --ink: #0e0f15;
+  --panel: #161822;
+  --raised: #1d2030;
+  --line: #2a2d40;
+  --text: #e9eaf2;
+  --muted: #8d92a8;
+  --a: #ffb066;
+  --b: #d45fa8;
+  --c: #7a66f0;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--ink); color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.top {
+  display: flex; align-items: center; gap: 14px; padding: 18px 28px;
+  border-bottom: 1px solid var(--line);
+}
+.title { flex: 1; }
+h1 { margin: 0; font: 600 24px/1.1 var(--serif); }
+.title p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 28px; max-width: 1180px; margin: 0 auto; padding: 24px 28px 80px; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } aside { order: -1; } .sticky { position: static !important; } }
+
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+h2 { margin: 0 0 12px; font: 600 17px/1.2 var(--serif); }
+.hint { margin: 6px 0 12px; color: var(--muted); font-size: 12.5px; max-width: 60ch; }
+
+.f { display: flex; align-items: center; gap: 14px; padding: 7px 0; }
+.f > span:first-child { flex: 0 0 190px; color: #c5c8d8; }
+.f.stack { flex-direction: column; align-items: stretch; gap: 6px; }
+.f.stack > span:first-child { flex: none; }
+.f input[type=range] { flex: 1; accent-color: var(--b); min-width: 0; }
+.f output { flex: 0 0 34px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.f input[type=color] { width: 54px; height: 30px; padding: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--raised); cursor: pointer; }
+.f input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--b); }
+.inline { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 0; }
+
+select, input[type=text], input[type=time], input[type=search], textarea {
+  background: var(--raised); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 10px; font: inherit;
+}
+.f select, .f input[type=text] { flex: 1; min-width: 0; }
+textarea { width: 100%; font: 12.5px/1.45 ui-monospace, "SF Mono", Consolas, monospace; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible,
+[role="button"]:focus-visible { outline: 2px solid var(--b); outline-offset: 1px; }
+
+button {
+  background: var(--raised); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer;
+}
+button:hover { border-color: var(--b); }
+button.danger:hover { border-color: #ff6b6b; color: #ff9d9d; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 9px; }
+.theme-search { width: 100%; margin: 0 0 10px; }
+.card {
+  position: relative; height: 64px; border: 0; border-bottom: 4px solid var(--line); border-radius: 10px;
+  color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.85); font-weight: 600; font-size: 12.5px;
+  display: flex; align-items: flex-end; padding: 7px 9px; text-align: left; line-height: 1.15;
+  cursor: pointer;
+}
+.card:hover { filter: brightness(1.18); }
+/* FIX: `.x` is now a real <button>; reset the default chrome so it looks the same. */
+.card .x {
+  position: absolute; top: 4px; right: 4px;
+  width: 20px; height: 20px; padding: 0; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); border: 0; border-radius: 50%;
+  color: #fff; font: 600 14px/1 system-ui, sans-serif;
+  text-shadow: none; cursor: pointer;
+}
+.card .x:hover { background: rgba(220,53,69,.85); border: 0; }
+.card .x:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+.colors { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cc { display: flex; align-items: center; gap: 2px; }
+.cc button { padding: 2px 7px; border-radius: 6px; }
+.cc button:disabled { opacity: .35; cursor: default; }
+
+.switch { position: relative; width: 46px; height: 26px; display: inline-block; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; background: var(--line); border-radius: 26px; transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch input:checked + span { background: linear-gradient(90deg, var(--a), var(--b), var(--c)); }
+.switch input:checked + span::after { transform: translateX(20px); }
+.switch input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .switch span, .switch span::after { transition: none; } }
+
+.sticky { position: sticky; top: 20px; }
+#pv { position: relative; height: 290px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+#pvBg { position: absolute; inset: 0; }
+.mock { position: absolute; inset: 0; display: flex; flex-direction: column; }
+#pvUi { padding: 9px 14px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.ws { flex: 1; display: flex; justify-content: center; padding: 18px 26px 0; }
+#pvPage { width: 100%; padding: 16px 18px; border-radius: 3px 3px 0 0; box-shadow: 0 2px 14px rgba(0,0,0,.4); }
+#pvPage h3 { margin: 0 0 6px; font: 600 17px/1.2 var(--serif); }
+#pvPage p { margin: 0; font-size: 13px; line-height: 1.55; }
+#pvLink { text-decoration: underline; }
+#pvCaret { display: inline-block; width: 2px; height: 1.1em; vertical-align: text-bottom; margin-left: 2px; }
+.grp { grid-column: 1 / -1; margin: 8px 0 -2px; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.grp:first-child { margin-top: 0; }

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Docs Afterglow</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="../icons/icon.svg" width="26" height="26" alt="">
+    <h1>Docs Afterglow</h1>
+    <label class="switch" title="Turn the theme on or off (Alt+Shift+D)">
+      <input type="checkbox" id="enabled" aria-label="Enable theme">
+      <span aria-hidden="true"></span>
+    </label>
+  </header>
+
+  <section>
+    <h2 id="themeHeading">Theme</h2>
+    <input id="themeSearch" class="theme-search" type="search" placeholder="Search themes" aria-label="Search themes">
+    <div id="grid" class="grid" role="group" aria-labelledby="themeHeading"></div>
+  </section>
+
+  <section>
+    <h2 id="bgHeading">Background</h2>
+    <select id="bgType" aria-labelledby="bgHeading"></select>
+    <div class="row" id="speedRow">
+      <label for="speed">Speed</label>
+      <input type="range" id="speed" min="0" max="100">
+    </div>
+  </section>
+
+  <div class="btns">
+    <button id="open" type="button">All settings</button>
+    <button id="studio" type="button">Studio</button>
+  </div>
+
+  <script src="../shared.js"></script>
+  <script src="../layers.js"></script>
+  <script src="../themes.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

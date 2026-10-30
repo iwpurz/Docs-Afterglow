@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Docs Afterglow settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+<header class="top">
+  <img src="../icons/icon.svg" width="34" height="34" alt="">
+  <div class="title">
+    <h1>Docs Afterglow</h1>
+    <p>Changes apply to open Google Docs tabs as you make them.</p>
+  </div>
+  <label class="switch" title="Theme on/off (Alt+Shift+D)">
+    <input type="checkbox" data-path="enabled" aria-label="Enable Docs Afterglow">
+    <span aria-hidden="true"></span>
+  </label>
+</header>
+
+<div class="layout">
+<main>
+
+  <section>
+    <h2 id="presetsHeading">Themes</h2>
+    <input id="themeSearch" class="theme-search" type="search" placeholder="Search themes" aria-label="Search themes">
+    <div id="presetGrid" class="grid" role="group" aria-labelledby="presetsHeading"></div>
+    <div class="actions">
+      <button id="savePreset">Save current look</button>
+      <button id="openStudio">Open Studio</button>
+      <button id="exportBtn">Export settings</button>
+      <button id="importBtn">Import settings</button>
+      <button id="resetBtn" class="danger">Reset everything</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </section>
+
+  <section>
+    <h2>Background</h2>
+    <p class="hint">Shows behind the pages and through any toolbar or page transparency you set below.</p>
+    <p class="hint"><a href="../studio/studio.html" target="_blank" rel="noopener">Open Afterglow Studio</a> to build themes with images, video and cinematic effects.</p>
+    <label class="f"><span>Type</span><select id="bgType" data-path="bg.type"></select></label>
+    <p class="hint" data-when="bg.type=layers">This background comes from Studio. <a href="../studio/studio.html" target="_blank" rel="noopener">Edit it in Studio</a>.</p>
+
+    <div class="f" data-when="bg.type=gradient|animated-gradient|aurora|stars|matrix|network|plasma|image|solid">
+      <span>Colors</span>
+      <div id="colors" class="colors"></div>
+    </div>
+    <p class="hint" data-when="bg.type=aurora">First color is the sky; the others become glowing blobs.</p>
+    <p class="hint" data-when="bg.type=plasma">All colors form the palette the plasma cycles through.</p>
+
+    <label class="f" data-when="bg.type=gradient|animated-gradient|stars|matrix|network"><span>Angle</span><input type="range" min="0" max="360" data-path="bg.angle"></label>
+    <label class="f" data-when="bg.type=animated-gradient|aurora|stars|matrix|network|plasma"><span>Speed</span><input type="range" min="0" max="100" data-path="bg.speed"></label>
+    <label class="f" data-when="bg.type=aurora|stars|matrix|network|plasma"><span>Intensity</span><input type="range" min="0" max="100" data-path="bg.intensity"></label>
+    <label class="f" data-when="bg.type=stars|matrix|network"><span>Density</span><input type="range" min="0" max="100" data-path="bg.density"></label>
+    <label class="f" data-when="bg.type=stars|matrix|network"><span>Particle color</span><input type="color" data-path="bg.fxColor"></label>
+    <label class="f" data-when="bg.type=stars|matrix|network|plasma"><span>Frame rate cap</span>
+      <select data-path="bg.fps" data-num="1"><option value="15">15 fps (lightest)</option><option value="24">24 fps</option><option value="30">30 fps</option><option value="60">60 fps</option></select>
+    </label>
+    <label class="f check" data-when="bg.type=animated-gradient|aurora|stars|matrix|network|plasma"><span>Animate</span><input type="checkbox" data-path="bg.animate"></label>
+
+    <div data-when="bg.type=image">
+      <div class="f"><span>Image file</span>
+        <div class="inline">
+          <input type="file" id="imgFile" accept="image/*" aria-label="Upload background image">
+          <button id="imgClear" type="button">Remove</button>
+        </div>
+      </div>
+      <label class="f"><span>Or image URL</span><input type="text" data-path="bg.imageUrl" placeholder="https://…"></label>
+      <label class="f"><span>Fit</span>
+        <select data-path="bg.imageFit"><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Stretch</option></select>
+      </label>
+      <label class="f"><span>Blur</span><input type="range" min="0" max="40" data-path="bg.imageBlur"></label>
+      <label class="f"><span>Darken</span><input type="range" min="0" max="90" data-path="bg.imageDim"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Docs home page</h2>
+    <label class="f check"><span>Theme the home page</span><input type="checkbox" data-path="home.enabled" aria-label="Theme the Docs home page"></label>
+    <label class="f" data-when="home.enabled=true"><span>Panel opacity</span><input type="range" min="20" max="100" data-path="home.opacity"></label>
+    <p class="hint">The page that lists your documents (docs.google.com/document). Lower the opacity to let your background show through.</p>
+  </section>
+
+  <section>
+    <h2>Toolbar, menus and sidebars</h2>
+    <label class="f check"><span>Dark-ify (invert)</span><input type="checkbox" data-path="ui.invert"></label>
+    <label class="f"><span>Background</span><input type="color" data-path="ui.bg"></label>
+    <label class="f"><span>Text &amp; icons</span><input type="color" data-path="ui.text"></label>
+    <label class="f"><span>Opacity</span><input type="range" min="20" max="100" data-path="ui.opacity"></label>
+    <label class="f check"><span>Keep photos natural</span><input type="checkbox" data-path="ui.protectImages"></label>
+  </section>
+
+  <section>
+    <h2>Page</h2>
+    <label class="f check"><span>Dark-ify (invert)</span><input type="checkbox" data-path="page.invert"></label>
+    <label class="f check" data-when="page.invert=true"><span>Keep text hues</span><input type="checkbox" data-path="page.keepHues"></label>
+    <label class="f check" data-when="page.invert=true"><span>Keep colorful content (emoji, images) as-is</span><input type="checkbox" data-path="page.keepColors"></label>
+    <label class="f"><span>Page fill</span>
+      <select data-path="page.type"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
+    </label>
+    <label class="f"><span>Page color</span><input type="color" data-path="page.bg"></label>
+    <label class="f" data-when="page.type=gradient"><span>Second color</span><input type="color" data-path="page.bg2"></label>
+    <label class="f" data-when="page.type=gradient"><span>Gradient angle</span><input type="range" min="0" max="360" data-path="page.angle"></label>
+    <label class="f"><span>Page opacity</span><input type="range" min="0" max="100" data-path="page.opacity"></label>
+    <label class="f"><span>Text color</span><input type="color" data-path="page.text"></label>
+    <label class="f"><span>Text tint strength</span><input type="range" min="0" max="100" data-path="page.tint"></label>
+    <label class="f"><span>Text brightness</span><input type="range" min="40" max="160" data-path="page.brightness"></label>
+    <label class="f"><span>Canvas blend</span>
+      <select data-path="page.blend">
+        <option value="auto">Auto</option><option value="normal">Normal (opaque)</option>
+        <option value="screen">Screen</option><option value="lighten">Lighten</option><option value="multiply">Multiply</option>
+      </select>
+    </label>
+    <p class="hint">If the page turns into a solid black or white block when you lower its opacity, try Screen (dark themes) or Multiply (light themes).</p>
+  </section>
+
+  <section>
+    <h2>Accents</h2>
+    <label class="f"><span>Cursor</span><input type="color" data-path="caret"></label>
+    <label class="f"><span>Accent</span><input type="color" data-path="accent"></label>
+    <label class="f"><span>Selection</span><input type="color" data-path="selection"></label>
+    <label class="f"><span>Selection strength</span><input type="range" min="5" max="90" data-path="selectionAlpha"></label>
+    <label class="f check"><span>Tinted scrollbars</span><input type="checkbox" data-path="scrollbars"></label>
+  </section>
+
+  <section>
+    <h2>Schedule</h2>
+    <label class="f"><span>Theme is active</span>
+      <select data-path="schedule.mode">
+        <option value="always">Always</option>
+        <option value="system">When Firefox is in dark mode</option>
+        <option value="time">Between set times</option>
+      </select>
+    </label>
+    <label class="f" data-when="schedule.mode=time"><span>From</span><input type="time" data-path="schedule.from"></label>
+    <label class="f" data-when="schedule.mode=time"><span>Until</span><input type="time" data-path="schedule.to"></label>
+  </section>
+
+  <section>
+    <h2>Advanced</h2>
+    <label class="f check"><span>Auto-clear opaque areas</span><input type="checkbox" data-path="autoClear"></label>
+    <p class="hint">Finds big containers that still paint an opaque background over your wallpaper and clears them automatically, so you don't need to hunt for their class names. Cleared elements are logged in the console as "[Docs Afterglow] cleared".</p>
+    <p class="hint">Google changes Docs' markup from time to time. If a part of the interface stops being themed, find its selector with the inspector (Ctrl+Shift+C) and edit the lists below. One CSS selector per line.</p>
+    <label class="f stack"><span>Toolbar, menus, sidebars (get the color treatment)</span><textarea rows="5" spellcheck="false" data-path="selectors.ui"></textarea></label>
+    <label class="f stack"><span>Workspace areas (made transparent so the background shows)</span><textarea rows="4" spellcheck="false" data-path="selectors.workspace"></textarea></label>
+    <label class="f stack"><span>Page canvases (the text layer)</span><textarea rows="3" spellcheck="false" data-path="selectors.pageCanvas"></textarea></label>
+    <label class="f stack"><span>Page surfaces (get the page fill)</span><textarea rows="3" spellcheck="false" data-path="selectors.pageBg"></textarea></label>
+    <div class="actions"><button id="resetSel" type="button">Restore default selectors</button></div>
+    <label class="f stack"><span>Your own CSS (loaded last; variables: --dd-bg, --dd-ui-bg, --dd-ui-text, --dd-page-bg, --dd-page-text, --dd-accent)</span>
+      <textarea rows="8" spellcheck="false" data-path="customCSS" placeholder=".docs-title-input { font-family: Georgia, serif !important; }"></textarea>
+    </label>
+  </section>
+
+</main>
+
+<aside>
+  <div class="sticky">
+    <h2>Preview</h2>
+    <div id="pv">
+      <div id="pvBg"></div>
+      <div class="mock">
+        <div id="pvUi">File&nbsp;&nbsp; Edit&nbsp;&nbsp; View&nbsp;&nbsp; Insert&nbsp;&nbsp; Format</div>
+        <div class="ws">
+          <div id="pvPage">
+            <h3>Quarterly notes</h3>
+            <p>The lights go down and the page stays readable. <span id="pvSel">Selected words</span> sit next to a <a id="pvLink">link</a>.<span id="pvCaret"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">The preview shows your colors and background. The real invert filters only run inside Google Docs.</p>
+  </div>
+</aside>
+</div>
+
+<script src="../shared.js"></script>
+<script src="../bgengine.js"></script>
+<script src="../layers.js"></script>
+<script src="../themes.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

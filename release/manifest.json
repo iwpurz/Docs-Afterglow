@@ -1,0 +1,67 @@
+{
+  "manifest_version": 2,
+  "name": "Docs Afterglow",
+  "version": "1.0.0",
+  "description": "Make Google Docs yours: dark and custom color themes, gradients, animated and scenic backgrounds, plus a Studio for building your own.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "docs-afterglow@local",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://docs.google.com/document/*"
+      ],
+      "js": [
+        "shared.js",
+        "bgengine.js",
+        "layers.js",
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "background": {
+    "scripts": [
+      "shared.js",
+      "themes.js",
+      "background.js"
+    ],
+    "persistent": false
+  },
+  "browser_action": {
+    "default_title": "Docs Afterglow",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "48": "icons/icon.svg",
+      "96": "icons/icon.svg"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "toggle-theme": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Toggle Docs Afterglow on/off"
+    }
+  }
+}

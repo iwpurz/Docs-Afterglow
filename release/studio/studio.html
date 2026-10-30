@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Afterglow Studio</title>
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><img src="../icons/icon.svg" width="26" height="26" alt=""><b>Afterglow Studio</b></div>
+  <input id="themeName" class="name" value="My theme" aria-label="Theme name" maxlength="60">
+  <input id="themeAuthor" class="author" placeholder="Author" aria-label="Author" maxlength="40">
+  <div class="spacer"></div>
+  <label class="live" title="Push every change to your open Docs tabs"><input type="checkbox" id="live"> Live in Docs</label>
+  <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+  <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+  <button id="btnLibrary">My themes</button>
+  <button id="btnSave">Save</button>
+  <button id="btnImport">Import</button>
+  <button id="btnExport">Export</button>
+  <button id="btnApply" class="primary">Apply to Docs</button>
+</header>
+
+<div class="work">
+  <aside class="layers" aria-label="Layers">
+    <div class="ph">
+      <h2>Layers</h2>
+      <div class="addwrap">
+        <button id="btnAdd" class="accent">+ Add layer</button>
+        <div id="addMenu" class="menu" hidden></div>
+      </div>
+    </div>
+    <ol id="layerList"></ol>
+    <div class="tpl">
+      <h3>Start from a theme</h3>
+      <div id="presetRow" class="chips"></div>
+    </div>
+  </aside>
+
+  <main class="stagewrap">
+    <div id="stage">
+      <div id="scaler">
+        <div id="pv"></div>
+        <div id="mock" aria-hidden="true">
+          <div class="m-top"><span class="m-logo"></span><span class="m-title">Quarterly notes</span><span class="m-share">Share</span></div>
+          <div class="m-menu"><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span></div>
+          <div class="m-tool"><i></i><i></i><i></i><i class="w"></i><i></i><i></i><i></i></div>
+          <div class="m-page">
+            <h3>Quarterly notes</h3>
+            <p>The lights go down and the page stays readable. Selected words sit next to a <a>link</a>.</p>
+            <div class="m-lines"><b></b><b></b><b class="s"></b><b></b><b class="s"></b></div>
+          </div>
+        </div>
+        <div id="handles" hidden>
+          <div id="hBox"></div>
+          <span class="hd" data-h="nw"></span><span class="hd" data-h="ne"></span><span class="hd" data-h="sw"></span><span class="hd" data-h="se"></span>
+          <span class="hrot" data-h="rot"></span>
+        </div>
+      </div>
+    </div>
+    <div class="stagebar">
+      <label><input type="checkbox" id="showDoc" checked> Show document</label>
+      <label>Toolbar opacity <input type="range" id="uiOp" min="0" max="100"></label>
+      <label>Page opacity <input type="range" id="pgOp" min="0" max="100"></label>
+      <label>Frame rate <select id="fps"><option value="15">15</option><option value="24">24</option><option value="30">30</option><option value="60">60</option></select></label>
+      <span id="hint" role="status"></span>
+    </div>
+  </main>
+
+  <aside class="inspector" id="inspector" aria-label="Properties"></aside>
+</div>
+
+<dialog id="dlgLibrary">
+  <form method="dialog">
+    <h2>My themes</h2>
+    <div id="libList" class="lib"></div>
+    <div class="dlgbar"><button value="close">Close</button></div>
+  </form>
+</dialog>
+
+<input type="file" id="fileImport" accept=".json,application/json" hidden>
+<input type="file" id="fileMedia" hidden>
+
+<script src="../shared.js"></script>
+<script src="../bgengine.js"></script>
+<script src="../layers.js"></script>
+<script src="../themes.js"></script>
+<script src="studio.js"></script>
+</body>
+</html>
