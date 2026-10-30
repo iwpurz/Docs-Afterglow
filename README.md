@@ -30,10 +30,10 @@ Not affiliated with or endorsed by Google. "Google Docs" is a trademark of Googl
 1. `about:config` → set `xpinstall.signatures.required` to `false`.
 2. `about:addons` → gear icon → *Install Add-on From File…* → pick the `.xpi`.
 
-**Temporary (any Firefox, until restart):** `about:debugging#/runtime/this-firefox` →
+**Temporary (until restart):** `about:debugging#/runtime/this-firefox` →
 *Load Temporary Add-on…* → pick the `.xpi` or `manifest.json`.
 
-Requires Firefox 115 or newer.
+Requires Firefox 140 or newer on desktop, or Firefox for Android 142 or newer.
 
 ## Privacy
 
@@ -59,7 +59,7 @@ Everything stays in your browser. No accounts, no network requests, no analytics
 
 ## Building
 
-`python3 scripts/build.py` writes `dist/docs-afterglow-<version>.xpi`. There is no build step beyond zipping;
+`python3 build.py` writes `release/dist/docs-afterglow-<version>.xpi`. There is no build step beyond zipping;
 the source is plain JavaScript.
 
 See `CHANGELOG.md` for release notes.
