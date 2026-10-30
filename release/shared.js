@@ -248,8 +248,9 @@
   function merge(t, s) {
     if (!isObj(s) || s === t) return t;
     Object.keys(s).forEach(function (k) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') return;
       const sv = s[k], tv = t[k];
-      if (isObj(sv) && isObj(tv)) merge(tv, sv);
+      if (isObj(sv) && Object.prototype.hasOwnProperty.call(t, k) && isObj(tv)) merge(tv, sv);
       else if (Array.isArray(sv) || isObj(sv)) t[k] = clone(sv);
       else t[k] = sv;
     });
