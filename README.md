@@ -1,65 +1,53 @@
 # Docs Afterglow
 
-Make Google Docs yours. A Firefox extension that re-themes Google Docs: dark and custom
-color themes, gradients, animated and scenic backgrounds, and a Studio for building your own.
+Docs Afterglow is a Firefox extension for customizing Google Docs and, in beta, Google Slides. It includes color themes, animated backgrounds, typing effects and sounds, optional music, and a theme editor called Studio.
 
-Created by iwpurz, 2026. Licensed under the GNU General Public License v3 (see `LICENSE`).
-Not affiliated with or endorsed by Google. "Google Docs" is a trademark of Google LLC.
-
-## What it does
-
-- **Ready-made themes** in five groups: Built-in (Midnight, Nord, Dracula, …), Scenes
-  (Sakura Dusk, Neon Rain, …), Seasonal (Halloween Hollow, Frosted Evergreen, Spring Bloom,
-  Summer Solstice), My looks (saved from the settings page) and My themes (saved in Studio).
-  Scenic presets use 25% film grain.
-  The popup, the settings page and Studio all show the same list.
-- **Backgrounds:** solid, gradient, animated gradient, aurora, starfield, Matrix rain, neon network,
-  plasma, your own image/GIF, or layered scenes with images, video and particle effects.
-- **Full control of the interface:** toolbar/menus/sidebars, the page, text, cursor, selection, scrollbars,
-  each with its own colors and opacity.
-- **The Docs home page** (your document list) gets the same theme, with its own opacity slider.
-- **Studio:** a layer editor. Open any theme in it, change it, save it, export/import `.afterglow.json` files.
-  Imported themes keep embedded PNG, JPEG, WebP, GIF and MP4/WebM media; SVG, remote links and custom code are rejected.
-- **Schedule:** always, only when Firefox is in dark mode, or between set times. `Alt+Shift+D` toggles the theme.
+| | |
+| --- | --- |
+| Current version | 1.1.0 |
+| Firefox requirement | Firefox 115 or newer |
+| License | GNU GPL v3 (see [LICENSE](LICENSE)) |
+| Release notes | [CHANGELOG.md](CHANGELOG.md) |
 
 ## Install
 
-**From Firefox Add-ons:** search for "Docs Afterglow" (once published).
+Install the published version from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/docs-afterglow/).
 
-**From a file (Firefox Developer Edition / Nightly / unbranded builds):**
-1. `about:config` → set `xpinstall.signatures.required` to `false`.
-2. `about:addons` → gear icon → *Install Add-on From File…* → pick the `.xpi`.
+## Run from source
 
-**Temporary (until restart):** `about:debugging#/runtime/this-firefox` →
-*Load Temporary Add-on…* → pick the `.xpi` or `manifest.json`.
+1. In Firefox, open `about:debugging#/runtime/this-firefox`.
+2. Choose **Load Temporary Add-on…** and select `src/manifest.json`.
+3. Open a Google Doc or Slides presentation.
 
-Requires Firefox 140 or newer on desktop, or Firefox for Android 142 or newer.
+## Build a package
+
+Run `./build.sh` from this directory in an environment with Bash, Python 3, and `zip`. The script reads the version from `src/manifest.json` and writes `dist/docs-afterglow-<version>.xpi`. A package intended for regular Firefox installation must be signed by Mozilla through AMO.
+
+## Project map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/manifest.json` | Firefox entry points, permissions, and script load order |
+| `src/shared.js`, `src/themes.js` | Shared settings, validation, presets, and built-in themes |
+| `src/background.js` | Extension shortcuts and music playback coordination |
+| `src/content.js` | Google Docs and Slides page theming and integration |
+| `src/bgengine.js`, `src/layers.js` | Background rendering and scene layers |
+| `src/canvashook.js` | Crisp mode canvas integration |
+| `src/fx.js`, `src/audio.js` | Typing effects, music controls, and synthesized typing sounds |
+| `src/popup/` | Toolbar popup interface |
+| `src/options/` | Settings interface |
+| `src/studio/` | Theme creation and editing interface |
+| `src/icons/` | Extension icons |
+| `build.sh` | Reproducible XPI packaging command |
+
+See [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) for code boundaries and the change workflow.
 
 ## Privacy
 
-Everything stays in your browser. No accounts, no network requests, no analytics. See `PRIVACY.md`.
+- The extension itself makes no network requests. A music service you choose may load its own page.
+- Keystrokes are classified only as letter, space, Enter, or Backspace to select an effect or sound; they are not stored, logged, or sent.
+- Crisp mode reads color strings, not document text. Popup diagnostics report class names and positions, not document contents.
 
-## Permissions
+## Contributing
 
-| Permission | Why |
-|---|---|
-| `storage` | Saves your settings and themes. |
-| `unlimitedStorage` | Themes can embed images/video; browser storage is otherwise capped at about 10 MB. |
-| Access to `docs.google.com/document/*` | The only place the theme is applied. |
-
-## Troubleshooting
-
-- **A part of Docs isn't themed.** Google changes Docs' markup. Settings → Advanced lists the CSS selectors
-  used for each area; inspect the element (Ctrl+Shift+C) and add its selector. *Auto-clear opaque areas* handles
-  most leftover light panels by itself.
-- **Pictures in a document look inverted.** Page text is drawn on a canvas and recolored as a whole, so images in
-  the document are inverted with it. Turn off *Dark-ify* under Page to see the original colors.
-- **Heavy animation.** Lower the frame rate cap (Background settings or Studio) or choose a static background.
-- **Background image doesn't show.** Upload the file instead of using a URL; Docs' security policy can block remote images.
-
-## Building
-
-`python3 build.py` writes `release/dist/docs-afterglow-<version>.xpi`. There is no build step beyond zipping;
-the source is plain JavaScript.
-
-See `CHANGELOG.md` for release notes.
+Keep the manifest's paths and script order aligned with the files they reference. Update [CHANGELOG.md](CHANGELOG.md) when preparing a release, and use the version in `src/manifest.json` as the package version.

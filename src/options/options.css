@@ -107,3 +107,11 @@ button.danger:hover { border-color: #ff6b6b; color: #ff9d9d; }
 #pvCaret { display: inline-block; width: 2px; height: 1.1em; vertical-align: text-bottom; margin-left: 2px; }
 .grp { grid-column: 1 / -1; margin: 8px 0 -2px; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .grp:first-child { margin-top: 0; }
+
+.hint.warn { border-left: 3px solid #f0b429; padding: 8px 10px; background: rgba(240,180,41,.10); border-radius: 6px; color: inherit; }
+.btnrow { margin: 6px 0 10px; }
+.btnrow button, .tracks button { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line, #444); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.tracks { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; gap: 6px; }
+.tracks li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tracks li.muted { opacity: .65; }
+input[type="url"] { flex: 1; min-width: 0; }

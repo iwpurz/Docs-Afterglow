@@ -104,14 +104,53 @@
 
   function refreshWhen() {
     $$('[data-when]').forEach((el) => {
-      const spec = el.dataset.when;
-      const eq = spec.indexOf('=');
-      if (eq < 0) { el.hidden = false; return; }
-      const path = spec.slice(0, eq);
-      const vals = spec.slice(eq + 1).split('|');
-      el.hidden = !vals.includes(String(getP(S, path)));
+      // "a.b=x|y&c.d=z": every &-separated condition must hold
+      el.hidden = !el.dataset.when.split('&').every((cond) => {
+        const eq = cond.indexOf('=');
+        if (eq < 0) return true;
+        return cond.slice(eq + 1).split('|').includes(String(getP(S, cond.slice(0, eq))));
+      });
+    });
+    detectLink();
+  }
+
+  // ---- music: link detection and audio files ---------------------------------
+  function detectLink() {
+    const n = $('#musicDetect'); if (!n) return;
+    const v = ($('#musicLink').value || '').trim();
+    if (!v) { n.textContent = 'Paste a YouTube video or playlist, Spotify track or playlist, SoundCloud link, or a direct https link to an .mp3 / .ogg / .wav file.'; return; }
+    const i = DD.parseMusicLink(v);
+    n.textContent = i.kind === 'none' ? 'That link is not supported, so it will not be saved. Try a YouTube, Spotify or SoundCloud link, or an https link ending in .mp3 / .ogg.' : 'Detected: ' + i.label + '.';
+  }
+  let tracks = [];
+  function renderTracks() {
+    const ul = $('#trackList'); if (!ul) return;
+    ul.textContent = '';
+    if (!tracks.length) { const li = document.createElement('li'); li.className = 'muted'; li.textContent = 'No files yet.'; ul.appendChild(li); return; }
+    tracks.forEach((t) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span'); name.textContent = t.name + ' (' + (t.size / 1048576).toFixed(1) + ' MB)';
+      const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove'; del.setAttribute('aria-label', 'Remove ' + t.name);
+      del.addEventListener('click', async () => { tracks = tracks.filter((x) => x.id !== t.id); await API.storage.local.set({ ddTracks: tracks }); renderTracks(); });
+      li.append(name, del); ul.appendChild(li);
     });
   }
+  API.storage.local.get('ddTracks').then((r) => { tracks = Array.isArray(r.ddTracks) ? r.ddTracks : []; renderTracks(); }).catch(() => {});
+  $('#addTracks').addEventListener('click', () => $('#trackFile').click());
+  $('#trackFile').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      if (tracks.length >= 12) { alert('You can add up to 12 audio files.'); break; }
+      if (!/^audio\//.test(f.type)) { alert(f.name + ' is not an audio file.'); continue; }
+      if (f.size > 40 * 1024 * 1024) { alert(f.name + ' is larger than 40 MB.'); continue; }
+      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+      tracks.push({ id: Math.random().toString(36).slice(2, 10), name: f.name.slice(0, 80), size: f.size, data });
+    }
+    e.target.value = '';
+    await API.storage.local.set({ ddTracks: tracks });
+    renderTracks();
+  });
+  $('#soundPreview').addEventListener('click', () => { if (window.DDAudio) window.DDAudio.preview(S.sound); });
 
   // ---- background type + colors --------------------------------------
   const typeSel = $('#bgType');
@@ -276,6 +315,7 @@
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     try {
+      if (f.size > 8 * 1024 * 1024) throw new Error('too large');
       const raw = JSON.parse(await f.text());
       const next = DD.normalize(raw);
       if (typeof next.customCSS === 'string' && next.customCSS.trim() && next.customCSS !== S.customCSS) {
@@ -283,6 +323,16 @@
           next.customCSS = S.customCSS;
         }
       }
+      // Settings files can point at remote images. Loading one tells that server your IP, so ask first.
+      const known = new Set([(S.bg && S.bg.imageUrl) || ''].concat(((S.bg && S.bg.layers) || []).map((l) => l.url || '')));
+      const remote = [next.bg && next.bg.imageUrl].concat(((next.bg && next.bg.layers) || []).map((l) => l.url)).filter((u) => u && !known.has(u));
+      if (remote.length) {
+        if (!confirm('This file loads ' + remote.length + ' image(s) or video(s) from the internet, for example:\n\n' + remote[0].slice(0, 120) + '\n\nLoading them contacts those websites and reveals your IP address. Keep them? (Cancel removes them.)')) {
+          if (next.bg.imageUrl && remote.indexOf(next.bg.imageUrl) >= 0) next.bg.imageUrl = '';
+          (next.bg.layers || []).forEach((l) => { if (l.url && remote.indexOf(l.url) >= 0) l.url = ''; });
+        }
+      }
+      if (f.size > 8 * 1024 * 1024) throw new Error('too large');
       S = next;
       render(); save();
     } catch (err) {

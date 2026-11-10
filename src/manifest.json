@@ -1,20 +1,17 @@
 {
   "manifest_version": 2,
   "name": "Docs Afterglow",
-  "version": "1.0.0",
-  "description": "Make Google Docs yours: dark and custom color themes, gradients, animated and scenic backgrounds, plus a Studio for building your own.",
+  "version": "1.1.0",
+  "description": "Make Google Docs and Slides yours: dark and custom color themes, animated and scenic backgrounds, typing effects and sounds, your own music, plus a Studio for building themes.",
   "browser_specific_settings": {
     "gecko": {
       "id": "docs-afterglow@local",
-      "strict_min_version": "140.0",
+      "strict_min_version": "115.0",
       "data_collection_permissions": {
         "required": [
           "none"
         ]
       }
-    },
-    "gecko_android": {
-      "strict_min_version": "142.0"
     }
   },
   "icons": {
@@ -28,13 +25,17 @@
   "content_scripts": [
     {
       "matches": [
-        "https://docs.google.com/document/*"
+        "https://docs.google.com/document/*",
+        "https://docs.google.com/presentation/*"
       ],
       "js": [
         "shared.js",
+        "canvashook.js",
         "bgengine.js",
         "layers.js",
-        "content.js"
+        "content.js",
+        "audio.js",
+        "fx.js"
       ],
       "run_at": "document_start"
     }
@@ -45,7 +46,7 @@
       "themes.js",
       "background.js"
     ],
-    "persistent": false
+    "persistent": true
   },
   "browser_action": {
     "default_title": "Docs Afterglow",
@@ -65,6 +66,19 @@
         "default": "Alt+Shift+D"
       },
       "description": "Toggle Docs Afterglow on/off"
+    },
+    "toggle-sound": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Mute / unmute typing sounds"
+    },
+    "toggle-music": {
+      "suggested_key": {
+        "default": "Alt+Shift+M"
+      },
+      "description": "Play / pause ambient music"
     }
-  }
+  },
+  "content_security_policy": "script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
 }

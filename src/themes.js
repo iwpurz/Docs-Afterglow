@@ -28,10 +28,30 @@
     'Halloween Hollow': { ui: '#170d20', uiText: '#f0e4ff', page: '#1e1229', text: '#f3eaff', accent: '#ff8a3d' },
     'Frosted Evergreen': { ui: '#0d1b17', uiText: '#e0f2e9', page: '#10231d', text: '#e7f5eb', accent: '#f2c879' },
     'Spring Bloom': { ui: '#21152b', uiText: '#ffeaf3', page: '#291a32', text: '#ffedf5', accent: '#ff9dc7' },
-    'Summer Solstice': { ui: '#21170f', uiText: '#fff0d4', page: '#2b1d12', text: '#fff3dd', accent: '#ffd27a' }
+    'Summer Solstice': { ui: '#21170f', uiText: '#fff0d4', page: '#2b1d12', text: '#fff3dd', accent: '#ffd27a' },
+    'Cozy Hearth': { ui: '#1c0f0a', uiText: '#ffe8d2', page: '#22120c', text: '#ffeadb', accent: '#ff9a4a' },
+    'Northern Lights': { ui: '#0a1326', uiText: '#e4f5ff', page: '#0c172b', text: '#e8f6ff', accent: '#2dffb0' },
+    'Midnight Library': { ui: '#1a120b', uiText: '#f3e2c8', page: '#20160d', text: '#f5e6cd', accent: '#e8b266' },
+    'Deep Ocean': { ui: '#06182a', uiText: '#dff6ff', page: '#081d31', text: '#e3f7ff', accent: '#4fd6e8' }
+  };
+  // What each built-in theme sounds and feels like while you type. These only choose WHICH effect/sound plays;
+  // the on/off switches stay yours. Music links are never bundled.
+  const V = (fx, sound, o) => ({ fx: { kind: fx, color: 'accent', intensity: (o && o.i) || 50, combo: true }, sound: { kind: sound, volume: (o && o.v) || 40, pitch: true, special: true, release: true } });
+  const SCENE_VIBES = {
+    'Sakura Dusk': V('petals', 'koto'), 'Neon Rain': V('shockwave', 'synthpluck'), 'Winter Window': V('snow', 'glass'),
+    'Ember Forge': V('flames', 'thock'), 'Firefly Meadow': V('fireflies', 'kalimba'), 'Autumn Drift': V('leaves', 'wood'),
+    'Halloween Hollow': V('embers', 'pencil'), 'Frosted Evergreen': V('snow', 'kalimba'), 'Spring Bloom': V('petals', 'marimba'),
+    'Summer Solstice': V('sparks', 'marimba'), 'Cozy Hearth': V('flames', 'wood'), 'Northern Lights': V('stardust', 'glass'),
+    'Midnight Library': V('stardust', 'typewriter', { v: 42 }), 'Deep Ocean': V('bubbles', 'drops')
+  };
+  const CLASSIC_VIBES = {
+    'Midnight': V('glow', 'soft'), 'AMOLED': V('ripple', 'thock'), 'Nord': V('snow', 'soft'), 'Dracula': V('sparks', 'clicky'),
+    'Mocha': V('embers', 'wood'), 'Solarized': V('stardust', 'kalimba'), 'Lamplight': V('fireflies', 'typewriter'), 'Aurora': V('stardust', 'glass'),
+    'Synthwave': V('shockwave', 'synthpluck'), 'Matrix': V('glyphs', 'clicky'), 'Deep Space': V('stardust', 'glass'), 'Neon Network': V('pixels', 'synthpluck'),
+    'Plasma Glass': V('hearts', 'drops'), 'Paper Light': V('notes', 'pencil')
   };
   const SCENE_FALLBACK = { ui: '#171a21', uiText: '#e3e6ec', page: '#1c1f27', text: '#e8eaed', accent: '#8ab4f8' };
-  const SEASONAL = new Set(['Halloween Hollow', 'Frosted Evergreen', 'Spring Bloom', 'Summer Solstice']);
+  const SEASONAL = new Set(['Halloween Hollow', 'Frosted Evergreen', 'Spring Bloom', 'Summer Solstice', 'Cozy Hearth']);
 
   // ---- Studio theme  <->  settings snapshot ------------------------------
   function toSnapshot(t) {
@@ -41,7 +61,8 @@
       page: { invert: inv, bg: pg.bg, bg2: pg.bg, type: 'solid', text: pg.text, opacity: pg.opacity, blend: 'auto' },
       accent: t.accent,
       caret: pg.text,
-      bg: { type: 'layers', colors: [t.base], layers: clone(t.layers || []), fps: t.fps || 30, animate: true }
+      bg: { type: 'layers', colors: [t.base], layers: clone(t.layers || []), fps: t.fps || 30, animate: true },
+      vibe: t.vibe ? clone(t.vibe) : undefined
     };
   }
 
@@ -62,7 +83,8 @@
       name, author: '', base, fps: bg.fps || 30, layers,
       ui: { bg: full.ui.bg, text: full.ui.text, opacity: full.ui.opacity },
       page: { bg: full.page.bg, text: full.page.text, opacity: full.page.opacity },
-      accent: full.accent, invert: full.ui.invert !== false
+      accent: full.accent, invert: full.ui.invert !== false,
+      vibe: snap && snap.vibe ? clone(snap.vibe) : undefined
     };
   }
 
@@ -70,14 +92,15 @@
     const c = SCENE_COLORS[name] || SCENE_FALLBACK;
     return toSnapshot({
       base: p.base, fps: 30, layers: p.layers, invert: true,
-      ui: { bg: c.ui, text: c.uiText, opacity: 85 }, page: { bg: c.page, text: c.text, opacity: 84 }, accent: c.accent
+      ui: { bg: c.ui, text: c.uiText, opacity: 85 }, page: { bg: c.page, text: c.text, opacity: 84 }, accent: c.accent,
+      vibe: SCENE_VIBES[name]
     });
   }
 
   // ---- catalog ------------------------------------------------------------
   function entries(S, library) {
     const out = [];
-    Object.keys(DD.PRESETS).forEach((n) => out.push({ key: 'b:' + n, name: n, group: 'Built-in', snap: DD.PRESETS[n] }));
+    Object.keys(DD.PRESETS).forEach((n) => out.push({ key: 'b:' + n, name: n, group: 'Built-in', snap: CLASSIC_VIBES[n] ? Object.assign({}, DD.PRESETS[n], { vibe: CLASSIC_VIBES[n] }) : DD.PRESETS[n] }));
     if (DDL) {
       const sc = DDL.presets();
       Object.keys(sc).forEach((n) => out.push({ key: 's:' + n, name: n, group: SEASONAL.has(n) ? 'Seasonal' : 'Scenes', snap: sceneSnap(n, sc[n]) }));

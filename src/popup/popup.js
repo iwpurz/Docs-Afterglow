@@ -78,7 +78,7 @@
   function syncRow() {
     speedRow.hidden = !ANIMATED.includes(S.bg.type);
   }
-  function refreshUI() {
+  let refreshUI = function () {
     enabled.checked = !!S.enabled;
 
     // A stale `bg.type` from a future/older build shouldn't leave the select
@@ -94,7 +94,7 @@
     );
 
     syncRow();
-  }
+  };
 
   // ---- events ------------------------------------------------------------
   enabled.addEventListener('change', () => {
@@ -207,6 +207,69 @@
     if (JSON.stringify(incoming) === JSON.stringify(S)) return;
     S = incoming;
     refreshUI();
+  });
+
+  // ---- typing effects / sounds / music chips --------------------------------
+  const chipFx = $('#chipFx'), chipSound = $('#chipSound'), chipMusic = $('#chipMusic');
+  const musicRow = $('#musicRow'), musicLink = $('#musicLink'), musicNote = $('#musicNote');
+  function syncChips() {
+    chipFx.setAttribute('aria-pressed', String(!!S.fx.enabled));
+    chipSound.setAttribute('aria-pressed', String(!!S.sound.enabled));
+    chipMusic.setAttribute('aria-pressed', String(!!S.music.enabled));
+    musicRow.hidden = !S.music.enabled;
+    if (document.activeElement !== musicLink) musicLink.value = S.music.link || '';
+    noteLink();
+  }
+  [[chipFx, 'fx'], [chipSound, 'sound'], [chipMusic, 'music']].forEach(([el, k]) => el.addEventListener('click', () => {
+    S[k].enabled = !S[k].enabled; syncChips(); save(0);
+  }));
+  function noteLink() {
+    const v = (musicLink.value || '').trim();
+    if (!S.music.enabled) { musicNote.textContent = ''; return; }
+    if (S.music.source === 'files') { musicNote.textContent = 'Playing your audio files (change in All settings).'; return; }
+    if (!v) { musicNote.textContent = 'Paste a link to start. Audio files can be added in All settings.'; return; }
+    const i = DD.parseMusicLink(v);
+    musicNote.textContent = i.kind === 'none' ? 'That link is not supported.' : 'Detected: ' + i.label + '.';
+  }
+  musicLink.addEventListener('input', () => {
+    const v = musicLink.value.trim(), ok = !v || DD.parseMusicLink(v).kind !== 'none';
+    if (ok) { S.music.link = v; S.music.source = 'link'; save(0); }
+    noteLink();
+  });
+  const baseRefresh = refreshUI;
+  refreshUI = function () { baseRefresh(); syncChips(); };   // eslint-disable-line no-func-assign
+
+  // ---- what's new (once per version; not shown on a fresh install) ----------------
+  try {
+    const ver = API.runtime.getManifest().version;
+    const st = await API.storage.local.get(['ddSeenVersion', 'ddSettings']);
+    if (st.ddSeenVersion !== ver) {
+      if (st.ddSeenVersion === undefined && st.ddSettings === undefined) API.storage.local.set({ ddSeenVersion: ver });
+      else {
+        $('#news').hidden = false;
+        $('#newsClose').addEventListener('click', () => { $('#news').hidden = true; API.storage.local.set({ ddSeenVersion: ver }); });
+      }
+    }
+  } catch (e) { /* cosmetic only */ }
+
+  // ---- diagnostics: copied to the clipboard, never sent anywhere ----------------
+  $('#diag').addEventListener('click', async () => {
+    const msg = $('#diagMsg');
+    try {
+      const tabs = await API.tabs.query({ active: true, currentWindow: true });
+      if (!tabs[0]) throw new Error('no tab');
+      const rep = await API.tabs.sendMessage(tabs[0].id, { type: 'dd-diagnose' });
+      if (!rep) throw new Error('no reply');
+      const text = JSON.stringify(rep, null, 1);
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) {
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand('copy'); ta.remove(); if (!ok) throw e;
+      }
+      msg.textContent = 'Copied. Paste it into your bug report.';
+    } catch (e) {
+      msg.textContent = 'Open a Google Docs tab first.';
+    }
   });
 
   refreshUI();

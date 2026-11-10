@@ -30,10 +30,31 @@
     </div>
   </section>
 
+  <section>
+    <h2 id="vibeHeading">While you type</h2>
+    <div class="chips" role="group" aria-labelledby="vibeHeading">
+      <button type="button" class="chip" id="chipFx" aria-pressed="false">Effects</button>
+      <button type="button" class="chip" id="chipSound" aria-pressed="false">Sounds</button>
+      <button type="button" class="chip" id="chipMusic" aria-pressed="false">Music</button>
+    </div>
+    <div class="row" id="musicRow" hidden>
+      <label for="musicLink">Music link</label>
+      <input type="url" id="musicLink" placeholder="YouTube, Spotify, SoundCloud or .mp3 link" maxlength="500" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="hint" id="musicNote" role="status"></p>
+  </section>
+
+  <div class="news" id="news" hidden>
+    <strong>New in 1.2</strong> Better typing sounds, your own music (YouTube, Spotify or audio files), new Studio effects, gentler film grain. Typing features are off until you turn them on.
+    <button type="button" id="newsClose">Got it</button>
+  </div>
+
   <div class="btns">
     <button id="open" type="button">All settings</button>
     <button id="studio" type="button">Studio</button>
   </div>
+
+  <p class="foot"><button type="button" id="diag" class="link">Copy diagnostics</button><span id="diagMsg" role="status"></span></p>
 
   <script src="../shared.js"></script>
   <script src="../layers.js"></script>

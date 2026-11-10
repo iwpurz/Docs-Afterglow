@@ -24,6 +24,9 @@
   let styleEl = null, svgEl = null, hostEl = null;
   let bgSig = '', filterSig = '', lastSrc = '', lastCached = '';
   let mounted = false;
+  let tintEl = null, invEl = null;
+  let pageMode = null, crispFailed = false, bannerEl = null;   // Crisp mode is decided once per page load
+  let selCache = { key: '', all: '', pop: '' };
 
   const lines = (t) => String(t || '').split('\n').map(s => s.trim()).filter(Boolean);
   const rule  = (list, body) => list.map(s => s + '{' + body + '}').join('\n');
@@ -34,7 +37,50 @@
   };
 
   // The document list ("front page") lives under /document/ but has no /d/<id>/ segment.
-  const isHomePage = () => !/\/document\/(u\/\d+\/)?d\//.test(location.pathname);
+  const isSlides = () => location.pathname.indexOf('/presentation/') === 0;
+  const isHomePage = () => !/\/(document|presentation)\/(u\/\d+\/)?d\//.test(location.pathname);
+  // The editor chrome exists once Docs (#docs-editor) or Slides (shared #docs-chrome / film strip) has built its UI.
+  const editorReady = () => !!(document.getElementById('docs-editor') || (isSlides() && document.querySelector('#docs-chrome, #filmstrip, .punch-filmstrip')));
+
+  const crispOn = () => pageMode === true && !crispFailed && !!(window.DDCrisp && window.DDCrisp.ok);
+
+  // Crisp mode repaints canvases through a hook that only works for paint calls made AFTER it is switched on,
+  // so the mode is fixed for the lifetime of a page load; changing it later asks for a reload.
+  function showReloadBanner() {
+    if (bannerEl || !document.body) return;
+    const b = document.createElement('div');
+    b.id = 'dd-banner';
+    b.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2147483647;display:flex;gap:10px;align-items:center;' +
+      'padding:10px 14px;border-radius:12px;background:#1f2430;color:#e8eaed;font:13px/1.3 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);';
+    const t = document.createElement('span');
+    t.textContent = 'Docs Afterglow: reload this document to switch the page rendering mode.';
+    const go = document.createElement('button');
+    go.textContent = 'Reload';
+    go.style.cssText = 'cursor:pointer;border:0;border-radius:8px;padding:6px 12px;background:#8ab4f8;color:#101318;font-weight:600;';
+    go.addEventListener('click', () => location.reload());
+    const x = document.createElement('button');
+    x.textContent = '\u00d7';
+    x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'cursor:pointer;border:0;background:transparent;color:inherit;font-size:18px;line-height:1;';
+    x.addEventListener('click', () => { b.remove(); bannerEl = null; });
+    b.append(t, go, x);
+    document.documentElement.appendChild(b);
+    bannerEl = b;
+  }
+
+  // Valid selector strings are computed once per selector-list change instead of on every pass.
+  function selectors() {
+    const sel = (S && S.selectors) || {};
+    const key = (sel.ui || '') + '\u0001' + (sel.menus || '');
+    if (key !== selCache.key) {
+      selCache = {
+        key,
+        all: validSel(lines(sel.ui).concat(lines(sel.menus))).join(','),
+        pop: validSel(lines(sel.menus)).join(',')
+      };
+    }
+    return selCache;
+  }
 
   // body gets `invert(1) hue-rotate(180deg)`; this is the color to paint it BEFORE the filter so it
   // comes out as `hexColor` afterwards (the hue rotation by 180deg is its own inverse).
@@ -105,20 +151,41 @@
     out.push('.docs-companion-app-switcher-container, .companion-app-switcher-container{background:' + s.ui.bg + ' !important;}');
     out.push('.app-switcher-button-icon-container[style*="black-24dp"], .app-switcher-button-icon-container[style*="grey600"]{filter:invert(1) !important;}');
 
-    // Docs home page (document list): themed with the same colors, and the wallpaper shows through.
-    // A plain CSS filter is used because SVG filters on a page-sized element come out blurry in Firefox.
-    // Light panels are made transparent by autoClear() so the body color below shows through.
+    // Docs home page (document list). A filter on <body> turns <body> into the containing block for every
+    // fixed/sticky element (duplicated headings, a misplaced + button) and only paints as tall as the
+    // viewport. So nothing is filtered here: a fixed tint layer sits above the wallpaper, and a click-through
+    // overlay with backdrop-filter inverts what is painted under it. The wallpaper is pre-inverted so the overlay
+    // restores it, and pictures are re-inverted for the same reason.
     {
       const hop = num(s.home && s.home.opacity, 82) / 100;
+      const FLIP_H = 'invert(1) hue-rotate(180deg)';
+      out.push('#dd-home-tint,#dd-home-inv{display:none;position:fixed;inset:0;pointer-events:none;}');
       if (s.ui.invert) {
-        out.push('html[data-dd-home] body{filter:invert(1) hue-rotate(180deg) !important;background:' + preFilterColor(s.ui.bg, hop) + ' !important;}');
-        out.push('html[data-dd-home] body :is(img,video,canvas,picture){filter:invert(1) hue-rotate(180deg) !important;}');
+        out.push('html[data-dd-home] #dd-home-tint{display:block;z-index:-1;background:' + preFilterColor(s.ui.bg, hop) + ';}');
+        out.push('html[data-dd-home] #dd-home-inv{display:block;z-index:2147483646;-webkit-backdrop-filter:' + FLIP_H + ';backdrop-filter:' + FLIP_H + ';}');
+        out.push('html[data-dd-home] #dd-bg{filter:' + FLIP_H + ';}');
+        out.push('html[data-dd-home] body :is(img,video,canvas,picture){filter:' + FLIP_H + ' !important;}');
       } else {
-        out.push('html[data-dd-home] body{background:' + DD.rgba(s.ui.bg, hop) + ' !important;}');
+        out.push('html[data-dd-home] #dd-home-tint{display:block;z-index:-1;background:' + DD.rgba(s.ui.bg, hop) + ';}');
       }
       const raised = '#' + [0, 1, 2].map(i => Math.round(DD.hex(s.ui.bg)[i] + (DD.hex(s.ui.text)[i] - DD.hex(s.ui.bg)[i]) * 0.1).toString(16).padStart(2, '0')).join('');
       out.push('html[data-dd-home] [data-dd-hs]{background:' + (s.ui.invert ? preFilterColor(raised, 1) : raised) + ' !important;}');
       out.push('html[data-dd-home] #docs-chrome{background:transparent !important;}');
+    }
+
+    // Side panels: Docs leaves a 16px gap to the left of the outline sidebar (and none of it is painted), so the wallpaper
+    // showed through between the sidebar and the screen edge. A one-sided shadow in the toolbar color fills that gap.
+    if (!isSlides()) {
+      const uiOp = num(s.ui.opacity, 100) / 100;
+      const gap = s.ui.invert ? preFilterColor(s.ui.bg, uiOp) : DD.rgba(s.ui.bg, uiOp);
+      out.push('html:not([data-dd-home]) .left-sidebar-container[data-dd-ui]{box-shadow:-16px 0 0 0 ' + gap + ' !important;}');
+      out.push('html:not([data-dd-home]) .docs-companion-app-switcher-container{background:' + DD.rgba(s.ui.bg, uiOp) + ' !important;}');
+    }
+
+    // "Show side panel" / "Hide side panel" button: it sits in the unfiltered side-panel strip, so flip it by itself.
+    if (s.ui.invert) {
+      const COLL = '[role="button"][aria-label*="side panel" i],button[aria-label*="side panel" i],[role="button"][data-tooltip*="side panel" i]';
+      out.push('html:not([data-dd-home]) :is(' + COLL + '):not([data-dd-ui] *):not([data-dd-pop] *){filter:invert(1) hue-rotate(180deg) !important;}');
     }
 
     // --- MEDIA PROTECTION ---
@@ -132,6 +199,14 @@
       const bgSel = [];
       ['[data-dd-ui]', '[data-dd-pop]'].forEach(h => bgIcons.forEach(m => bgSel.push(h + ' ' + m)));
       out.push(rule(bgSel, 'filter: ' + FLIP + ' !important;'));
+      // Slides filmstrip: the control icons (grid view, hide filmstrip, thumbnail size) and the page numbers are plain
+      // SVG glyphs that must flip with the panel; only the little slide previews inside keep their real colors.
+      const NS = ':not(#dd-svg)';
+      out.push('[data-dd-ui] svg.punch-filmstrip-thumbnails' + NS + '{filter:none !important;}');
+      out.push('[data-dd-ui] svg.punch-filmstrip-thumbnails svg' + NS + '{filter:' + FLIP + ' !important;}');
+      out.push('[data-dd-ui] .punch-filmstrip-controls svg' + NS + ', [data-dd-ui] #filmstrip-controls svg' + NS + '{filter:none !important;}');
+      // Rulers are drawn glyphs too: let them flip with the bar instead of being flipped back.
+      out.push('[data-dd-ui] :is([class*="ruler" i],[id*="ruler" i]) :is(canvas,svg,img)' + NS + ', [data-dd-ui] :is(canvas,svg,img):is([class*="ruler" i],[id*="ruler" i])' + NS + '{filter:none !important;}');
     }
 
     // --- PAGE CANVAS & BACKGROUNDS ---
@@ -139,7 +214,9 @@
     out.push('.kix-page-paginated svg rect, .kix-canvas-tile-content svg rect { fill: transparent !important; }');
 
     out.push(rule(pb, 'border-color:' + DD.rgba(s.ui.text, 0.22) + ' !important;background:' + pageBg + ' !important;'));
-    out.push(rule(pc, 'filter:url(#dd-f-page) !important;' + blend));
+    // Crisp mode recolors at paint time (canvashook.js): the canvas needs no filter, so pictures keep their
+    // colors and text stays sharp. Classic mode filters the whole canvas.
+    if (!crispOn()) out.push(rule(pc, 'filter:url(#dd-f-page) !important;' + blend));
     const mix = (a, b, t) => '#' + [0, 1, 2].map(i => { const A = DD.hex(a)[i], B = DD.hex(b)[i]; return Math.round(A + (B - A) * t).toString(16).padStart(2, '0'); }).join('');
     const edge = mix(s.ui.bg, s.ui.text, 0.28);
     out.push(rule(pb, 'border-color:' + edge + ' !important;box-shadow:none !important;outline:none !important;'));
@@ -239,7 +316,9 @@
       if (window.DDLayers) lengine = window.DDLayers.create(hostEl);
       bgSig = ''; lastSrc = '';
     }
-    [styleEl, svgEl, hostEl].forEach(n => { if (n && !n.isConnected) root.appendChild(n); });
+    if (!tintEl) { tintEl = document.createElement('div'); tintEl.id = 'dd-home-tint'; tintEl.setAttribute('aria-hidden', 'true'); }
+    if (!invEl)  { invEl  = document.createElement('div'); invEl.id  = 'dd-home-inv';  invEl.setAttribute('aria-hidden', 'true'); }
+    [styleEl, svgEl, hostEl, tintEl, invEl].forEach(n => { if (n && !n.isConnected) root.appendChild(n); });
     mounted = true;
     return true;
   }
@@ -267,9 +346,9 @@
 
 
   // Tag only the outermost UI matches; never tag anything that contains the page.
-  const PAGE_SAFE = '.kix-appview-editor, .kix-page-paginated, .kix-page, .kix-canvas-tile-content, #dd-bg';
+  const PAGE_SAFE = '.kix-appview-editor, .kix-page-paginated, .kix-page, .kix-canvas-tile-content, #workspace-container, #canvas-container, #dd-bg';
   const PROTECT = '.docs-companion-app-switcher-container'; // side-panel app icons: left unfiltered so they keep their colors
-  const INSIDE_PAGE = '.kix-page-paginated, .kix-page, .kix-canvas-tile-content';
+  const INSIDE_PAGE = '.kix-page-paginated, .kix-page, .kix-canvas-tile-content, #workspace-container, #canvas-container';
   let tagTimer = 0, lastTag = 0;
   function clearTags() {
     document.querySelectorAll('[data-dd-ui],[data-dd-pop]').forEach(el => { el.removeAttribute('data-dd-ui'); el.removeAttribute('data-dd-pop'); });
@@ -277,11 +356,9 @@
   function tagUi() {
     tagTimer = 0; lastTag = Date.now();
     if (!S || !mounted || !isActive(S)) return;
-    if (isHomePage() || !document.getElementById('docs-editor')) { clearTags(); return; }   // home page: plain CSS filter on <body>
+    if (isHomePage() || !editorReady()) { clearTags(); return; }   // home page: plain CSS filter on <body>
     try {
-      const sel = S.selectors || {};
-      const popSel = validSel(lines(sel.menus)).join(',');
-      const all = validSel(lines(sel.ui).concat(lines(sel.menus))).join(',');
+      const sc = selectors(), popSel = sc.pop, all = sc.all;
       if (!all) return;
       const matched = new Set(document.querySelectorAll(all));
 
@@ -313,6 +390,43 @@
       });
     } catch (e) { console.error('[Docs Afterglow] tagUi failed:', e); }
   }
+  // Fast path: nodes Docs just added (menus, dialogs, tooltips) are tagged on the very next frame, so they
+  // never flash light. The full pass above still runs afterwards to reconcile nesting and removals.
+  const addedQ = new Set();
+  let fastRaf = 0;
+  function tagAdded() {
+    fastRaf = 0;
+    const nodes = Array.from(addedQ); addedQ.clear();
+    if (!S || !mounted || !isActive(S) || isHomePage() || !editorReady()) return;
+    try {
+      const sc = selectors(), all = sc.all, popSel = sc.pop;
+      if (!all) return;
+      const covers = (a) => a.matches(all) && !a.querySelector(PAGE_SAFE) && !a.querySelector(PROTECT);
+      const cand = new Set();
+      nodes.forEach(n => {
+        if (!n.isConnected || n.nodeType !== 1) return;
+        if (n.closest(INSIDE_PAGE) || n.closest(PROTECT)) return;
+        if (n.matches(all)) cand.add(n);
+        n.querySelectorAll(all).forEach(e => cand.add(e));
+      });
+      cand.forEach(el => {
+        if (el.id === 'dd-bg' || el.id === 'dd-svg' || el.id === 'dd-style' || /^dd-/.test(el.id)) return;
+        if (el.hasAttribute('data-dd-ui') || el.hasAttribute('data-dd-pop')) return;
+        if (el.closest(INSIDE_PAGE) || el.closest(PROTECT)) return;
+        if (el.querySelector(PAGE_SAFE) || el.querySelector(PROTECT)) return;
+        if (!el.firstElementChild && !el.textContent.trim()) return;
+        for (let a = el.parentElement; a; a = a.parentElement) if (covers(a)) return;
+        const isPopup = el.parentElement === document.body && !!popSel && el.matches(popSel);
+        el.setAttribute(isPopup ? 'data-dd-pop' : 'data-dd-ui', '');
+      });
+    } catch (e) { /* the full pass will catch up */ }
+    scheduleTag();
+  }
+  function queueAdded(n) {
+    if (addedQ.size < 300) addedQ.add(n);
+    if (!fastRaf) fastRaf = requestAnimationFrame(tagAdded);
+  }
+
   // Throttled: at most one pass per 400 ms, however busy Docs is.
   function scheduleTag() {
     if (tagTimer) return;
@@ -320,7 +434,8 @@
   }
 
   function autoClear() {
-    if (!S || !S.autoClear || !hostEl || !isActive(S) || document.hidden) return;
+    // Slides: the slide itself is a big light box we must never clear, and its layout isn't known well enough to tell it apart.
+    if (isSlides() || !S || !S.autoClear || !hostEl || !isActive(S) || document.hidden) return;
     const home = isHomePage();
     const sel = S.selectors || {};
     // On the home page the editor's selector lists don't apply (and some are broad), so only protect media.
@@ -392,6 +507,8 @@
     if (styleEl) { styleEl.remove(); styleEl = null; }
     if (svgEl)   { svgEl.remove();   svgEl   = null; }
     if (hostEl)  { hostEl.remove();  hostEl  = null; }
+    if (tintEl)  { tintEl.remove();  tintEl  = null; }
+    if (invEl)   { invEl.remove();   invEl   = null; }
     if (engine)  { try { engine.destroy(); } catch (e) { /* ignore */ } engine = null; }
     if (lengine) { try { lengine.destroy(); } catch (e) { /* ignore */ } lengine = null; }
     bgSig = ''; filterSig = ''; lastSrc = '';
@@ -414,6 +531,20 @@
       if (home) document.documentElement.setAttribute('data-dd-home', '');
       else document.documentElement.removeAttribute('data-dd-home');
 
+      // Crisp mode: decided on the first editor apply of this page load.
+      if (!home && pageMode === null) {
+        const painted = !!document.querySelector('.kix-canvas-tile-content');
+        pageMode = !!S.page.crisp && !painted && !isSlides();          // already-painted tiles can't be recolored: stay classic and ask for a reload
+        if (S.page.crisp && painted && !isSlides()) showReloadBanner();
+        if (pageMode) setTimeout(() => {
+          // Self-check: if Docs painted but the hook never saw a color, it paints some other way: fall back.
+          if (window.DDCrisp && window.DDCrisp.hits === 0 && document.querySelector('.kix-canvas-tile-content')) { crispFailed = true; apply(); }
+        }, 6000);
+      } else if (!home && pageMode !== null && !!S.page.crisp !== pageMode && !crispFailed) {
+        showReloadBanner();
+      }
+      if (window.DDCrisp && !home) window.DDCrisp.configure(pageMode && !crispFailed ? S : { enabled: false, page: {} });
+
       const m   = DD.matrices(S) || {};
       const css = buildCSS(S, m);
       if (styleEl.textContent !== css) styleEl.textContent = css;
@@ -435,14 +566,16 @@
         }
       }
 
-      const json = JSON.stringify(S);
+      // First-paint cache (read synchronously at document_start). Saved presets can be large and are not
+      // needed to paint, so they are left out. The cache is validated again on load (normalize).
+      const json = JSON.stringify(Object.assign({}, S, { userPresets: {} }));
       if (json !== lastCached) {
         try { localStorage.setItem(CACHE, json); lastCached = json; }
         catch (e) { /* quota / privacy mode */ }
       }
 
       scheduleTag();
-      [300, 1200, 3500].forEach(ms => setTimeout(autoClear, ms));
+      [150, 700, 2000, 4500].forEach(ms => setTimeout(autoClear, ms));
     } catch (e) {
       console.error('[Docs Afterglow] apply failed:', e);
     }
@@ -474,6 +607,117 @@
     });
   }
 
+  // ---- diagnostics (only runs when the user presses "Copy diagnostics" in the popup) ----------------
+  // Reports class names, colors and positions of interface elements. It never includes document text,
+  // titles, URLs or document ids, and nothing is sent anywhere: the popup copies it to the clipboard.
+  function diagnose() {
+    const W = window.innerWidth, H = window.innerHeight;
+    const flags = (el) => ['data-dd-ui', 'data-dd-pop', 'data-dd-clear', 'data-dd-hs'].filter(a => el.hasAttribute(a)).map(a => a.slice(8));
+    const describe = (el) => {
+      let cs = null; try { cs = getComputedStyle(el); } catch (e) { /* ignore */ }
+      const r = el.getBoundingClientRect();
+      return {
+        el: nameOf(el).slice(0, 140),
+        bg: cs ? cs.backgroundColor : '',
+        pos: cs ? cs.position : '',
+        filter: cs && cs.filter !== 'none' ? 'yes' : '',
+        rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
+        dd: flags(el).join(',')
+      };
+    };
+    const probe = (x, y) => {
+      let st = []; try { st = document.elementsFromPoint(x, y).slice(0, 4); } catch (e) { /* ignore */ }
+      return { at: [Math.round(x), Math.round(y)], stack: st.map(describe) };
+    };
+    const edges = [];
+    [0.15, 0.35, 0.55, 0.75, 0.95].forEach(f => { edges.push(probe(2, H * f)); edges.push(probe(W - 3, H * f)); });
+    [0.1, 0.3, 0.5, 0.7, 0.9].forEach(f => { edges.push(probe(W * f, H - 3)); });
+    const cleared = Array.from(document.querySelectorAll('[data-dd-clear]')).slice(0, 25).map(describe);
+    const tagged = {
+      ui: document.querySelectorAll('[data-dd-ui]').length, pop: document.querySelectorAll('[data-dd-pop]').length,
+      clear: document.querySelectorAll('[data-dd-clear]').length, hs: document.querySelectorAll('[data-dd-hs]').length
+    };
+    // Tall narrow elements at either screen edge (sidebars and the side-panel strip), including ones that ignore the mouse.
+    const strips = [];
+    document.querySelectorAll('body *').forEach(el => {
+      if (strips.length >= 24 || /^dd-/.test(el.id)) return;
+      const r = el.getBoundingClientRect();
+      if (r.height < H * 0.45 || r.width < 6 || r.width > 340) return;
+      if (!(r.left < 40 || r.right > W - 340)) return;
+      const d = describe(el); let cs = null; try { cs = getComputedStyle(el); } catch (e) { /* ignore */ }
+      d.pe = cs ? cs.pointerEvents : ''; d.vis = cs ? cs.visibility + '/' + cs.display : '';
+      strips.push(d);
+    });
+    // Slides: outline of the large boxes, to see how the editor is laid out.
+    const outline = [];
+    if (isSlides() && !isHomePage()) {
+      document.querySelectorAll('body *').forEach(el => {
+        if (outline.length >= 45) return;
+        const r = el.getBoundingClientRect();
+        if (r.width * r.height < W * H * 0.04) return;
+        const d = describe(el); d.id = el.id || ''; outline.push(d);
+      });
+    }
+    // Slides: anything that looks like a caret/cursor, and what sits on top of the slide itself.
+    const carets = [], slideProbe = [];
+    if (isSlides() && !isHomePage()) {
+      document.querySelectorAll('[class*="cursor" i],[class*="caret" i],[id*="cursor" i],[id*="caret" i]').forEach(el => {
+        if (carets.length >= 14 || /^dd-/.test(el.id)) return;
+        const r = el.getBoundingClientRect();
+        if (r.width > 40 || r.height > 400) return;
+        const d = describe(el); d.thin = r.width <= 6 && r.height >= 8; carets.push(d);
+      });
+      const wc = document.getElementById('workspace-container');
+      if (wc) {
+        const r = wc.getBoundingClientRect();
+        slideProbe.push(probe(r.left + r.width / 2, r.top - 12), probe(r.left + r.width * 0.3, r.top - 5), probe(r.left - 8, r.top + r.height / 2));
+      }
+      const cv = document.getElementById('canvas') || document.getElementById('workspace');
+      if (cv) {
+        const r = cv.getBoundingClientRect();
+        [[0.5, 0.5], [0.1, 0.1], [0.9, 0.9]].forEach(f => slideProbe.push(probe(r.left + r.width * f[0], r.top + r.height * f[1])));
+      }
+    }
+    // Home page: look for the "Recent documents" heading and what could duplicate it.
+    const recent = [];
+    if (isHomePage()) {
+      document.querySelectorAll('*').forEach(el => {
+        if (recent.length >= 6 || el.children.length) return;
+        if ((el.textContent || '').trim().toLowerCase() !== 'recent documents') return;
+        const chain = []; let a = el.parentElement;
+        for (let i = 0; i < 7 && a; i++, a = a.parentElement) {
+          let cs = null; try { cs = getComputedStyle(a); } catch (e) { /* ignore */ }
+          chain.push({ el: nameOf(a).slice(0, 90), pos: cs ? cs.position : '', tf: cs && cs.transform !== 'none' ? 'yes' : '', filter: cs && cs.filter !== 'none' ? 'yes' : '' });
+        }
+        const d = describe(el);
+        let cs2 = null; try { cs2 = getComputedStyle(el); } catch (e) { /* ignore */ }
+        d.visibility = cs2 ? cs2.visibility + '/' + cs2.display + '/op' + cs2.opacity : '';
+        d.ariaHidden = el.getAttribute('aria-hidden') || '';
+        d.chain = chain;
+        recent.push(d);
+      });
+    }
+    let version = '';
+    try { version = API.runtime.getManifest().version; } catch (e) { /* ignore */ }
+    return {
+      tool: 'Docs Afterglow diagnostics', version, ua: navigator.userAgent, dpr: window.devicePixelRatio, viewport: [W, H],
+      page: isHomePage() ? 'home' : (isSlides() ? 'slides' : 'editor'), active: !!(S && isActive(S)),
+      fx: window.DDFx ? window.DDFx.info() : null,
+      crisp: { wanted: !!(S && S.page.crisp), pageMode, failed: crispFailed, hook: window.DDCrisp ? window.DDCrisp.info() : null },
+      tagged, cleared, edges, strips, outline, carets, slideProbe, recent
+    };
+  }
+  try {
+    if (API && API.runtime && API.runtime.onMessage) {
+      API.runtime.onMessage.addListener((msg) => {
+        if (msg && msg.type === 'dd-diagnose') {
+          try { return Promise.resolve(diagnose()); } catch (e) { return Promise.resolve({ error: String(e && e.message) }); }
+        }
+        return undefined;
+      });
+    }
+  } catch (e) { /* ignore */ }
+
   // Re-attach our nodes if Docs rewrites <html>, and re-evaluate schedules.
   try {
     new MutationObserver(() => {
@@ -487,13 +731,17 @@
     if (!document.body) return setTimeout(watchDom, 100);
     new MutationObserver((muts) => {
       if (!S || !mounted || document.hidden) return;
+      let any = false;
       for (const m of muts) {
         const t = m.target;
         if (!t || t.nodeType !== 1) continue;
         if (t.id && /^dd-/.test(t.id)) continue;
-        if (t.closest && t.closest('.kix-appview-editor, .kix-page-paginated, #dd-bg')) continue;
-        return scheduleTag();
+        if (t.closest && t.closest('.kix-appview-editor, .kix-page-paginated, #workspace-container, #canvas-container, #dd-bg, #dd-banner, #dd-fx')) continue;
+        any = true;
+        if (m.type === 'childList') m.addedNodes.forEach(n => { if (n.nodeType === 1) queueAdded(n); });
+        else queueAdded(t);
       }
+      if (any) scheduleTag();
     }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   }
   watchDom();
@@ -503,10 +751,12 @@
   setInterval(() => {
     if (!S || document.hidden) return;
     if (location.pathname !== lastPath) { lastPath = location.pathname; apply(); }
-  }, 1500);
-  setInterval(() => { if (S && !document.hidden) apply(); }, 30000);
-  setInterval(autoClear, 3500);
+  }, 2000);
+  // Only time-of-day schedules need a periodic re-check.
+  setInterval(() => { if (S && !document.hidden && S.schedule && S.schedule.mode === 'time') apply(); }, 30000);
+  setInterval(autoClear, 6000);
   window.addEventListener('resize', () => setTimeout(autoClear, 250), { passive: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S) { scheduleTag(); setTimeout(autoClear, 200); } });
   window.addEventListener('popstate', () => { if (S) apply(); });
   try {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');

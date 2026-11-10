@@ -102,6 +102,7 @@
       page: { bg: hexOr(pg.bg, '#1c1f27'), text: hexOr(pg.text, '#e8eaed'), opacity: clamp(num(pg.opacity, 84), 0, 100) },
       accent: hexOr(r.accent, '#8ab4f8'),
       invert: r.invert !== false,
+      vibe: DD.cleanVibe(r.vibe),
       libId: imported ? '' : str(r.libId, '', 60)
     };
   }
@@ -190,6 +191,7 @@
       S.ui.bg = theme.ui.bg; S.ui.text = theme.ui.text; S.ui.opacity = theme.ui.opacity; S.ui.invert = theme.invert !== false; S.page.invert = theme.invert !== false;
       S.page.bg = theme.page.bg; S.page.bg2 = theme.page.bg; S.page.type = 'solid'; S.page.text = theme.page.text; S.page.opacity = theme.page.opacity;
       S.accent = theme.accent;
+      DD.applyVibe(S, theme.vibe);        // the theme's typing effect / sound / music (never the on/off switches)
       await sset({ ddSettings: S, ddAssets: usedAssets() });
       if (!quiet) say('Applied. Open Docs tabs update by themselves.');
     } catch (e) { console.warn('[Studio] apply failed', e); say('Could not apply: ' + e.message); }
@@ -438,6 +440,44 @@
       el('button', { class: 'danger', text: 'Delete layer', onClick: () => delLayer(theme.layers.findIndex((x) => x.id === l.id)) })));
   }
 
+  // ---- typing vibe: the effect, sound and music that travel with the theme ----------
+  const FX_NAMES = [['fadein', 'Fade in'], ['fadeout', 'Fade out (glow trail)'], ['sparks', 'Sparks'], ['ripple', 'Ripples'], ['confetti', 'Confetti'], ['embers', 'Embers'], ['stardust', 'Stardust'], ['hearts', 'Hearts'], ['glow', 'Soft glow'],
+    ['petals', 'Petals'], ['snow', 'Snowflakes'], ['bubbles', 'Bubbles'], ['notes', 'Music notes'], ['leaves', 'Falling leaves'], ['pixels', 'Pixels'], ['fireflies', 'Fireflies'],
+    ['flames', 'Flames'], ['glyphs', 'Code rain'], ['shockwave', 'Shockwaves']];
+  const SOUND_NAMES = [['soft', 'Soft laptop keys'], ['thock', 'Creamy thock'], ['clicky', 'Clicky switches'], ['typewriter', 'Typewriter'], ['pencil', 'Pencil on paper'],
+    ['wood', 'Wooden blocks'], ['kalimba', 'Kalimba'], ['koto', 'Koto'], ['glass', 'Glass chimes'], ['synthpluck', 'Synth pluck'], ['drops', 'Water drops'], ['piano', 'Felt piano'], ['marimba', 'Marimba']];
+  function setVibe(part, make) {          // make(current) returns the new part, or null to go back to "keep my setting"
+    const vb = theme.vibe = theme.vibe || {};
+    const nv = make(vb[part]);
+    if (nv) vb[part] = nv; else delete vb[part];
+    if (!vb.fx && !vb.sound && !vb.music) delete theme.vibe;
+  }
+  function renderVibe() {
+    const vb = theme.vibe || {};
+    insp.append(section('Typing vibe'));
+    insp.append(el('p', { class: 'note', text: 'Optional. When someone picks this theme, their typing effect, sound and music switch to these. It never turns anything on by itself.' }));
+    insp.append(selectRow('Effect', () => (vb.fx ? vb.fx.kind : ''), (v) => setVibe('fx', (c) => (v ? Object.assign({ kind: v, color: 'accent', intensity: 50, combo: true }, c, { kind: v }) : null)),
+      [['', 'Keep my own']].concat(FX_NAMES)));
+    if (vb.fx) {
+      insp.append(selectRow('Effect color', () => vb.fx.color, (v) => setVibe('fx', (c) => Object.assign({}, c, { color: v })), [['accent', 'Natural / accent'], ['theme', 'Particle color'], ['rainbow', 'Rainbow'], ['white', 'White']], { inspector: false, list: false }));
+      insp.append(rangeRow('Effect strength', () => vb.fx.intensity, (v) => setVibe('fx', (c) => Object.assign({}, c, { intensity: v })), 0, 100, 1, '', 'vfxi'));
+    }
+    insp.append(selectRow('Sound', () => (vb.sound ? vb.sound.kind : ''), (v) => setVibe('sound', (c) => (v ? Object.assign({ kind: v, volume: 40, pitch: true, special: true, release: true }, c, { kind: v }) : null)),
+      [['', 'Keep my own']].concat(SOUND_NAMES)));
+    if (vb.sound) {
+      insp.append(rangeRow('Sound volume', () => vb.sound.volume, (v) => setVibe('sound', (c) => Object.assign({}, c, { volume: v })), 0, 100, 1, '', 'vsv'));
+      insp.append(row('', el('button', { type: 'button', text: 'Preview this sound', onClick: () => { if (window.DDAudio) window.DDAudio.preview(Object.assign({}, DD.DEFAULTS.sound, vb.sound)); } })));
+    }
+    const link = el('input', { type: 'url', value: vb.music ? vb.music.link : '', placeholder: 'YouTube, Spotify, SoundCloud or .mp3 link', maxlength: 500, 'aria-label': 'Music link',
+      onChange: () => {
+        const v = link.value.trim();
+        if (v && DD.parseMusicLink(v).kind === 'none') { say('That link is not supported (YouTube, Spotify, SoundCloud or an https audio file).'); link.value = vb.music ? vb.music.link : ''; return; }
+        edit(() => setVibe('music', (c) => (v ? Object.assign({ shuffle: false, volume: 30 }, c, { link: v }) : null)), '', { inspector: true });
+      } });
+    insp.append(row('Music link', link));
+    insp.append(el('p', { class: 'note', text: vb.music ? 'Detected: ' + DD.parseMusicLink(vb.music.link).label + '. Plays only for people who turned Music on.' : 'Leave empty to keep each person\'s own music.' }));
+  }
+
   function renderSceneInspector() {
     insp.append(section('Theme'));
     insp.append(colorRow('Base color', () => theme.base, (v) => { theme.base = v; }, 'base'));
@@ -451,6 +491,7 @@
     insp.append(colorRow('Page text', () => theme.page.text, (v) => { theme.page.text = v; }, 'pgtx'));
     insp.append(rangeRow('Page opacity', () => theme.page.opacity, (v) => { theme.page.opacity = v; }, 0, 100, 1, '%'));
     insp.append(colorRow('Links and accent', () => theme.accent, (v) => { theme.accent = v; }, 'acc'));
+    renderVibe();
     insp.append(el('p', { class: 'note', text: 'Select a layer on the left to edit it. Lower the toolbar and page opacity so the scene shows through.' }));
   }
 

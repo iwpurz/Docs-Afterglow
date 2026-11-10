@@ -88,14 +88,16 @@
     <label class="f"><span>Background</span><input type="color" data-path="ui.bg"></label>
     <label class="f"><span>Text &amp; icons</span><input type="color" data-path="ui.text"></label>
     <label class="f"><span>Opacity</span><input type="range" min="20" max="100" data-path="ui.opacity"></label>
-    <label class="f check"><span>Keep photos natural</span><input type="checkbox" data-path="ui.protectImages"></label>
+    <label class="f check"><span>Keep avatars and thumbnails natural</span><input type="checkbox" data-path="ui.protectImages"></label>
+    <p class="hint">Only affects pictures in the toolbar, menus and sidebars (profile photo, app icons, thumbnails). Photos inside your document are controlled under Page below.</p>
   </section>
 
   <section>
     <h2>Page</h2>
     <label class="f check"><span>Dark-ify (invert)</span><input type="checkbox" data-path="page.invert"></label>
+    <p class="hint warn" data-when="page.invert=true"><strong>Heads up:</strong> Dark-ify recolors the whole page, so photos, GIFs and emoji in your document can look inverted or tinted. Keep photos natural (below) softens this, and Crisp mode leaves pictures exactly as they are.</p>
     <label class="f check" data-when="page.invert=true"><span>Keep text hues</span><input type="checkbox" data-path="page.keepHues"></label>
-    <label class="f check" data-when="page.invert=true"><span>Keep colorful content (emoji, images) as-is</span><input type="checkbox" data-path="page.keepColors"></label>
+    <label class="f check" data-when="page.invert=true"><span>Keep photos and emoji natural (approximate)</span><input type="checkbox" data-path="page.keepColors"></label>
     <label class="f"><span>Page fill</span>
       <select data-path="page.type"><option value="solid">Solid</option><option value="gradient">Gradient</option></select>
     </label>
@@ -106,6 +108,8 @@
     <label class="f"><span>Text color</span><input type="color" data-path="page.text"></label>
     <label class="f"><span>Text tint strength</span><input type="range" min="0" max="100" data-path="page.tint"></label>
     <label class="f"><span>Text brightness</span><input type="range" min="40" max="160" data-path="page.brightness"></label>
+    <label class="f check"><span>Crisp mode (beta): sharper text, untouched pictures</span><input type="checkbox" data-path="page.crisp"></label>
+    <p class="hint">Recolors page text as Docs paints it instead of filtering the whole page, so photos, GIFs and emoji keep their real colors and text is not blurred. Reload your open documents after changing it. If it can't work on your Docs version it switches itself off.</p>
     <label class="f"><span>Canvas blend</span>
       <select data-path="page.blend">
         <option value="auto">Auto</option><option value="normal">Normal (opaque)</option>
@@ -122,6 +126,63 @@
     <label class="f"><span>Selection</span><input type="color" data-path="selection"></label>
     <label class="f"><span>Selection strength</span><input type="range" min="5" max="90" data-path="selectionAlpha"></label>
     <label class="f check"><span>Tinted scrollbars</span><input type="checkbox" data-path="scrollbars"></label>
+  </section>
+
+  <section>
+    <h2>Typing effects</h2>
+    <label class="f check"><span>Let themes choose my typing effect, sound and music</span><input type="checkbox" data-path="themeVibe"></label>
+    <p class="hint">Themes can bring their own effect, sound and music. They only pick which one plays: your on/off switches below never change by themselves.</p>
+    <label class="f check"><span>Effects while you type</span><input type="checkbox" data-path="fx.enabled" aria-label="Typing effects"></label>
+    <label class="f" data-when="fx.enabled=true"><span>Effect</span>
+      <select data-path="fx.kind">
+        <optgroup label="Simple"><option value="fadein">Fade in</option><option value="fadeout">Fade out (glow trail)</option><option value="glow">Soft glow</option><option value="ripple">Ripples</option></optgroup>
+        <optgroup label="Bursts"><option value="sparks">Sparks</option><option value="pixels">Pixels</option><option value="confetti">Confetti</option><option value="shockwave">Shockwaves</option></optgroup>
+        <optgroup label="Floating"><option value="stardust">Stardust</option><option value="fireflies">Fireflies</option><option value="bubbles">Bubbles</option><option value="hearts">Hearts</option><option value="notes">Music notes</option><option value="embers">Embers</option><option value="flames">Flames</option></optgroup>
+        <optgroup label="Falling"><option value="petals">Petals</option><option value="snow">Snowflakes</option><option value="leaves">Falling leaves</option><option value="glyphs">Code rain</option></optgroup>
+      </select>
+    </label>
+    <label class="f" data-when="fx.enabled=true"><span>Color</span>
+      <select data-path="fx.color"><option value="accent">Theme accent</option><option value="theme">Background particle color</option><option value="rainbow">Rainbow</option><option value="white">White</option></select>
+    </label>
+    <label class="f" data-when="fx.enabled=true"><span>Intensity</span><input type="range" min="0" max="100" data-path="fx.intensity"></label>
+    <label class="f check" data-when="fx.enabled=true"><span>Combo: bigger bursts when you keep typing</span><input type="checkbox" data-path="fx.combo"></label>
+    <p class="hint">Drawn on a click-through layer at the cursor. Particle effects turn off automatically if your system asks for reduced motion; the simple fades stay on. Fade in works best on a plain (solid) page color.</p>
+  </section>
+
+  <section>
+    <h2>Typing sounds</h2>
+    <label class="f check"><span>Play a sound for each key</span><input type="checkbox" data-path="sound.enabled" aria-label="Typing sounds"></label>
+    <label class="f" data-when="sound.enabled=true"><span>Sound</span>
+      <select data-path="sound.kind">
+        <optgroup label="Keyboards"><option value="soft">Soft laptop keys</option><option value="thock">Creamy thock</option><option value="clicky">Clicky switches</option><option value="typewriter">Typewriter (ratchet, bell and carriage return)</option></optgroup>
+        <optgroup label="Textures"><option value="pencil">Pencil on paper</option><option value="wood">Wooden blocks</option><option value="drops">Water drops</option></optgroup>
+        <optgroup label="Notes (every key is a note on a scale)"><option value="kalimba">Kalimba</option><option value="koto">Koto</option><option value="glass">Glass chimes</option><option value="synthpluck">Synth pluck</option><option value="piano">Felt piano</option><option value="marimba">Marimba</option></optgroup>
+      </select>
+    </label>
+    <label class="f" data-when="sound.enabled=true"><span>Volume</span><input type="range" min="0" max="100" data-path="sound.volume"></label>
+    <label class="f check" data-when="sound.enabled=true"><span>Key release sound</span><input type="checkbox" data-path="sound.release"></label>
+    <label class="f check" data-when="sound.enabled=true"><span>Vary the pitch a little</span><input type="checkbox" data-path="sound.pitch"></label>
+    <label class="f check" data-when="sound.enabled=true"><span>Different sounds for Enter, Space and Backspace</span><input type="checkbox" data-path="sound.special"></label>
+    <div class="btnrow" data-when="sound.enabled=true"><button type="button" id="soundPreview">Preview typing</button></div>
+    <p class="hint">Every sound is generated live by your browser: no audio files, no downloads. The extension only sorts each key press into letter, space, Enter or Backspace to choose the sound. It never records, stores or sends what you type. Shortcut: Alt+Shift+S.</p>
+  </section>
+
+  <section>
+    <h2>Music</h2>
+    <label class="f check"><span>Play music while a document is open</span><input type="checkbox" data-path="music.enabled" aria-label="Music"></label>
+    <label class="f" data-when="music.enabled=true"><span>Source</span>
+      <select data-path="music.source"><option value="link">A link (YouTube, Spotify, SoundCloud or audio file)</option><option value="files">My own audio files</option></select>
+    </label>
+    <label class="f" data-when="music.enabled=true&amp;music.source=link"><span>Link</span><input type="url" id="musicLink" data-path="music.link" placeholder="https://www.youtube.com/watch?v=..." maxlength="500" autocomplete="off" spellcheck="false"></label>
+    <p class="hint" id="musicDetect" data-when="music.enabled=true&amp;music.source=link" role="status"></p>
+    <div data-when="music.enabled=true&amp;music.source=files">
+      <div class="btnrow"><button type="button" id="addTracks">Add audio files</button><input type="file" id="trackFile" accept="audio/*" multiple hidden></div>
+      <ul id="trackList" class="tracks"></ul>
+      <label class="f check"><span>Shuffle</span><input type="checkbox" data-path="music.shuffle"></label>
+    </div>
+    <label class="f" data-when="music.enabled=true"><span>Volume</span><input type="range" min="0" max="100" data-path="music.volume"></label>
+    <label class="f check" data-when="music.enabled=true"><span>Only play while this tab is visible</span><input type="checkbox" data-path="music.activeTabOnly"></label>
+    <p class="hint">YouTube, Spotify and SoundCloud links show a small player in the corner of your document (drag it by its top bar); that site loads it, not this extension, and Spotify plays full songs only if you are signed in to Spotify in Firefox. Direct audio links and your own files play from the extension itself. Music starts on your first key press or click in the document. Files you add stay on this device. Shortcut: Alt+Shift+M.</p>
   </section>
 
   <section>
@@ -175,6 +236,7 @@
 </div>
 
 <script src="../shared.js"></script>
+<script src="../audio.js"></script>
 <script src="../bgengine.js"></script>
 <script src="../layers.js"></script>
 <script src="../themes.js"></script>

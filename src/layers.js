@@ -183,6 +183,8 @@
     return c;
   }
 
+  // Film grain is shown at a quarter of the strength its slider value used to give (it was too strong).
+  const GRAIN_SCALE = 0.25;
   let grainUrl = '';
   function grainTile() {
     if (grainUrl) return grainUrl;
@@ -721,6 +723,194 @@
   };
 
   // Non-canvas effects (pure CSS)
+  // ---- Bubbles ----
+  EFFECTS.bubbles = {
+    label: 'Bubbles', icon: '🫧', group: 'Falling',
+    params: ['color', 'intensity', 'speed', 'size', 'wind'],
+    defaults: { color: '#9fe8ff', intensity: 45, speed: 35, size: 50, wind: 0 },
+    spriteSig: (P) => P.color,
+    sprites(P) {
+      const c = hexRgb(P.color);
+      return sprite(96, 96, 0, (x) => {
+        const g = x.createRadialGradient(48, 48, 20, 48, 48, 44);
+        g.addColorStop(0, rgba(c, 0.02)); g.addColorStop(0.8, rgba(c, 0.12)); g.addColorStop(1, rgba(c, 0.55));
+        x.fillStyle = g; x.beginPath(); x.arc(48, 48, 44, 0, TAU); x.fill();
+        x.strokeStyle = rgba(mixc(c, [255, 255, 255], 0.6), 0.7); x.lineWidth = 2; x.beginPath(); x.arc(48, 48, 43, 0, TAU); x.stroke();
+        x.fillStyle = 'rgba(255,255,255,0.75)'; x.beginPath(); x.ellipse(32, 30, 11, 6, -0.6, 0, TAU); x.fill();
+      });
+    },
+    count: (P) => 8 + num(P.intensity, 50) * 0.9,
+    spawn(p, fx, init) {
+      const u = fx.dpr;
+      p.z = R(); p.s = lerp(6, 30, Math.pow(p.z, 1.4)) * szm(fx.P) * u; p.a = lerp(0.35, 0.9, p.z);
+      p.x = rr(0, fx.w); p.y = init ? rr(0, fx.h * 1.05) : fx.h + p.s * 2;
+      p.ph = R() * TAU; p.wf = rr(0.5, 1.4); p.wa = rr(6, 24) * u; p.v = rr(18, 48) * u * (0.6 + p.z * 0.8);
+    },
+    update(p, dt, t, fx) {
+      p.ph += p.wf * dt; p.y -= p.v * spd(fx.P) * dt;
+      p.x += (Math.sin(p.ph) * p.wa + num(fx.P.wind, 0) / 100 * 60 * fx.dpr) * dt;
+      if (p.y < -p.s * 2) fx.spec.spawn(p, fx, false);
+      if (p.x > fx.w + p.s * 2) p.x = -p.s * 2; else if (p.x < -p.s * 2) p.x = fx.w + p.s * 2;
+    },
+    draw(c, p, fx) { c.globalAlpha = p.a; const s = p.s; c.drawImage(fx.sp, p.x - s, p.y - s, s * 2, s * 2); }
+  };
+
+  // ---- Glitter ----
+  EFFECTS.glitter = {
+    label: 'Glitter', icon: '✦', group: 'Glow',
+    params: ['color', 'color2', 'intensity', 'speed', 'size'],
+    defaults: { color: '#ffffff', color2: '#ffc8f0', intensity: 50, speed: 50, size: 50 },
+    comp: 'lighter',
+    spriteSig: (P) => P.color + P.color2,
+    sprites(P) {
+      return [P.color, P.color2].map((col) => { const c = hexRgb(col); return sprite(64, 64, 0, (x) => {
+        x.translate(32, 32);
+        const g = x.createRadialGradient(0, 0, 0, 0, 0, 30);
+        g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.18, rgba(c, 0.9)); g.addColorStop(1, rgba(c, 0));
+        x.fillStyle = g; x.beginPath(); x.moveTo(0, -30); x.quadraticCurveTo(2, -2, 30, 0); x.quadraticCurveTo(2, 2, 0, 30);
+        x.quadraticCurveTo(-2, 2, -30, 0); x.quadraticCurveTo(-2, -2, 0, -30); x.fill();
+      }); });
+    },
+    count: (P) => 14 + num(P.intensity, 50) * 1.1,
+    spawn(p, fx, init) {
+      p.x = rr(0, fx.w); p.y = rr(0, fx.h); p.k = R() < 0.6 ? 0 : 1; p.life = rr(1.2, 3.4);
+      p.age = init ? rr(0, p.life) : 0; p.s = rr(5, 15) * szm(fx.P) * fx.dpr; p.rot = rr(-0.5, 0.5);
+    },
+    update(p, dt, t, fx) { p.age += dt * (0.5 + spd(fx.P)); if (p.age > p.life) fx.spec.spawn(p, fx, false); },
+    draw(c, p, fx) {
+      const k = Math.sin(Math.PI * Math.min(1, p.age / p.life)); const s = p.s * (0.4 + k * 0.8);
+      c.globalAlpha = k * k * 0.95;
+      c.setTransform(1, 0, 0, 1, p.x, p.y); c.rotate(p.rot + p.age * 0.4);
+      c.drawImage(fx.sp[p.k], -s, -s, s * 2, s * 2);
+      c.setTransform(1, 0, 0, 1, 0, 0);
+    }
+  };
+
+  // ---- Confetti ----
+  EFFECTS.confetti = {
+    label: 'Confetti', icon: '🎉', group: 'Falling',
+    params: ['color', 'color2', 'intensity', 'speed', 'size', 'wind'],
+    defaults: { color: '#ff5c8a', color2: '#5cc8ff', intensity: 45, speed: 40, size: 50, wind: 10 },
+    count: (P) => 14 + num(P.intensity, 50) * 1.6,
+    spawn(p, fx, init) {
+      const u = fx.dpr, a = hexRgb(fx.P.color), b = hexRgb(fx.P.color2), k = R();
+      const c = k < 0.3 ? a : k < 0.6 ? b : k < 0.8 ? mixc(a, b, R()) : mixc(a, [255, 214, 90], 0.6);
+      p.col = rgba(c, 1); p.w = rr(5, 10) * szm(fx.P) * u; p.h = p.w * rr(0.4, 0.7);
+      p.x = rr(0, fx.w); p.y = init ? rr(-0.1, 1) * fx.h : -p.w * 2;
+      p.rot = R() * TAU; p.vr = rr(-3, 3); p.fl = R() * TAU; p.ff = rr(2, 6); p.v = rr(40, 110) * u; p.sw = R() * TAU; p.swa = rr(10, 40) * u;
+    },
+    update(p, dt, t, fx) {
+      p.fl += p.ff * dt; p.rot += p.vr * dt; p.sw += 1.3 * dt; p.y += p.v * spd(fx.P) * dt;
+      p.x += (Math.sin(p.sw) * p.swa + num(fx.P.wind, 0) / 100 * 120 * fx.dpr) * dt;
+      if (p.y > fx.h + 20) fx.spec.spawn(p, fx, false);
+      if (p.x > fx.w + 20) p.x = -20; else if (p.x < -20) p.x = fx.w + 20;
+    },
+    draw(c, p) {
+      const cs = Math.cos(p.rot), sn = Math.sin(p.rot);
+      c.globalAlpha = 0.92; c.fillStyle = p.col;
+      c.setTransform(cs, sn, -sn, cs, p.x, p.y); c.scale(1, Math.cos(p.fl));
+      c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      c.setTransform(1, 0, 0, 1, 0, 0);
+    }
+  };
+
+  // ---- Lava lamp blobs ----
+  EFFECTS.blobs = {
+    label: 'Lava lamp blobs', icon: '🫠', group: 'Glow',
+    params: ['color', 'color2', 'intensity', 'speed', 'size'],
+    defaults: { color: '#ff5fa2', color2: '#7a5cff', intensity: 40, speed: 30, size: 55 },
+    comp: 'lighter',
+    spriteSig: (P) => P.color + P.color2,
+    sprites(P) {
+      return [P.color, P.color2].map((col) => { const c = hexRgb(col); return sprite(256, 256, 0, (x) => {
+        const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+        g.addColorStop(0, rgba(c, 0.75)); g.addColorStop(0.5, rgba(c, 0.32)); g.addColorStop(1, rgba(c, 0));
+        x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+      }); });
+    },
+    count: (P) => 3 + Math.round(num(P.intensity, 50) / 100 * 7),
+    spawn(p, fx) {
+      p.k = R() < 0.5 ? 0 : 1; p.bx = R() * fx.w; p.by = R() * fx.h;
+      p.r = rr(0.18, 0.38) * Math.min(fx.w, fx.h) * szm(fx.P) * 1.4;
+      p.f1 = rr(0.05, 0.14); p.f2 = rr(0.04, 0.12); p.p1 = R() * TAU; p.p2 = R() * TAU;
+      p.ax = rr(0.1, 0.3) * fx.w; p.ay = rr(0.1, 0.3) * fx.h; p.x = p.bx; p.y = p.by;
+    },
+    update(p, dt, t, fx) {
+      const tt = t * spd(fx.P) * 2;
+      p.x = p.bx + Math.sin(tt * p.f1 * 6 + p.p1) * p.ax; p.y = p.by + Math.cos(tt * p.f2 * 6 + p.p2) * p.ay;
+    },
+    draw(c, p, fx) { c.globalAlpha = 0.55; const r = p.r; c.drawImage(fx.sp[p.k], p.x - r, p.y - r, r * 2, r * 2); }
+  };
+
+  // ---- Lightning ----
+  function makeBolt(fx) {
+    const pts = [], w = fx.w, h = fx.h;
+    let x = rr(0.15, 0.85) * w, y = 0;
+    const endY = rr(0.5, 0.92) * h, branches = [];
+    pts.push([x, y]);
+    while (y < endY) {
+      y += rr(0.025, 0.07) * h; x += rr(-0.045, 0.045) * w; pts.push([x, y]);
+      if (R() < 0.18) {
+        const br = [[x, y]]; let bx = x, by = y;
+        for (let i = 0; i < 4; i++) { by += rr(0.02, 0.05) * h; bx += rr(-0.05, 0.09) * w * (R() < 0.5 ? -1 : 1); br.push([bx, by]); }
+        branches.push(br);
+      }
+    }
+    return { pts, branches, age: 0, life: rr(0.5, 0.9) };
+  }
+  EFFECTS.lightning = {
+    label: 'Lightning', icon: '⚡', group: 'Atmosphere',
+    params: ['color', 'intensity'],
+    defaults: { color: '#cfe0ff', intensity: 40 },
+    comp: 'lighter',
+    tick(dt, t, fx) {
+      fx.bolts = fx.bolts || [];
+      if (fx.nextBolt == null) fx.nextBolt = t + rr(2, 5);
+      const rate = 0.4 + num(fx.P.intensity, 40) / 100 * 1.6;
+      if (t > fx.nextBolt && num(fx.P.intensity, 40) > 0) { fx.nextBolt = t + rr(3, 9) / rate; fx.bolts.push(makeBolt(fx)); }
+      for (let i = fx.bolts.length - 1; i >= 0; i--) { fx.bolts[i].age += dt; if (fx.bolts[i].age > fx.bolts[i].life) fx.bolts.splice(i, 1); }
+    },
+    drawAll(c, fx) {
+      const col = hexRgb(fx.P.color), u = fx.dpr, str = (pts) => { c.beginPath(); pts.forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]))); c.stroke(); };
+      (fx.bolts || []).forEach((b) => {
+        const k = Math.max(0, 1 - b.age / b.life), a = k * (b.age < 0.12 ? 1 : (Math.sin(b.age * 60) > 0 ? 1 : 0.55));
+        c.globalAlpha = a * 0.28 * (0.5 + num(fx.P.intensity, 40) / 100); c.fillStyle = rgba(col, 1); c.fillRect(0, 0, fx.w, fx.h);
+        c.globalAlpha = a; c.strokeStyle = rgba(mixc(col, [255, 255, 255], 0.7), 1); c.shadowColor = rgba(col, 1); c.shadowBlur = 18 * u;
+        c.lineJoin = 'round'; c.lineWidth = 2.2 * u; str(b.pts);
+        c.lineWidth = 1.1 * u; c.globalAlpha = a * 0.7; b.branches.forEach(str);
+        c.shadowBlur = 0;
+      });
+    }
+  };
+
+  // ---- Meteor shower ----
+  EFFECTS.meteors = {
+    label: 'Meteor shower', icon: '☄️', group: 'Glow',
+    params: ['color', 'intensity', 'speed'],
+    defaults: { color: '#bcd4ff', intensity: 45, speed: 50 },
+    comp: 'lighter',
+    tick(dt, t, fx) {
+      fx.met = fx.met || [];
+      if (fx.nextMet == null) fx.nextMet = t + rr(0.5, 2);
+      if (t > fx.nextMet && num(fx.P.intensity, 45) > 0) {
+        fx.nextMet = t + rr(0.4, 2.2) / (0.3 + num(fx.P.intensity, 45) / 40);
+        const a = rr(0.4, 0.75), v = rr(900, 1700) * fx.dpr * (0.6 + spd(fx.P) * 0.6);
+        fx.met.push({ x: rr(0.05, 1.1) * fx.w, y: rr(-0.1, 0.35) * fx.h, vx: Math.cos(a) * v, vy: Math.sin(a) * v, age: 0, life: rr(0.6, 1.2) });
+      }
+      for (let i = fx.met.length - 1; i >= 0; i--) { const m = fx.met[i]; m.age += dt; m.x += m.vx * dt; m.y += m.vy * dt; if (m.age > m.life) fx.met.splice(i, 1); }
+    },
+    drawAll(c, fx) {
+      const col = hexRgb(fx.P.color), u = fx.dpr;
+      (fx.met || []).forEach((m) => {
+        const f = Math.sin(Math.PI * Math.min(1, m.age / m.life)), len = 0.13;
+        const g = c.createLinearGradient(m.x, m.y, m.x - m.vx * len, m.y - m.vy * len);
+        g.addColorStop(0, rgba(mixc(col, [255, 255, 255], 0.8), f)); g.addColorStop(1, rgba(col, 0));
+        c.globalAlpha = 1; c.strokeStyle = g; c.lineWidth = 2.2 * u; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(m.x, m.y); c.lineTo(m.x - m.vx * len, m.y - m.vy * len); c.stroke();
+      });
+    }
+  };
+
   const DOM_EFFECTS = {
     vignette: {
       label: 'Vignette', icon: '◐', group: 'Atmosphere', params: ['color', 'intensity', 'size'],
@@ -729,6 +919,10 @@
     grain: {
       label: 'Film grain', icon: '▦', group: 'Atmosphere', params: ['intensity'],
       defaults: { intensity: 25 }
+    },
+    scanlines: {
+      label: 'CRT scanlines', icon: '☰', group: 'Atmosphere', params: ['intensity', 'size'],
+      defaults: { intensity: 30, size: 30 }
     }
   };
 
@@ -900,12 +1094,15 @@
         } else if (L.kind === 'vignette') {
           const c = hexRgb(L.color || '#000'), a = clamp(num(L.intensity, 60) / 100, 0, 1), s = clamp(num(L.size, 50), 5, 95);
           el.style.background = 'radial-gradient(ellipse at 50% 50%,' + rgba(c, 0) + ' ' + s + '%,' + rgba(c, a) + ' 100%)';
+        } else if (L.kind === 'scanlines') {
+          const a = clamp(num(L.intensity, 30) / 100, 0, 1) * 0.5, n = 2 + Math.round(clamp(num(L.size, 30), 0, 100) / 100 * 5);
+          el.style.backgroundImage = 'repeating-linear-gradient(0deg,rgba(0,0,0,' + a + ') 0px,rgba(0,0,0,' + a + ') 1px,transparent 1px,transparent ' + n + 'px)';
         } else if (L.kind === 'grain') {
           el.style.backgroundImage = 'url(' + grainTile() + ')';
           el.style.backgroundSize = '200px 200px';
           // Soft-light keeps film texture subtle behind translucent Docs surfaces.
           el.style.mixBlendMode = L.blend && L.blend !== 'normal' ? L.blend : 'soft-light';
-          el.style.opacity = String(clamp(num(L.intensity, 25), 0, 100) / 100 * clamp(num(L.opacity, 100), 0, 100) / 100);
+          el.style.opacity = String(clamp(num(L.intensity, 25), 0, 100) / 100 * clamp(num(L.opacity, 100), 0, 100) / 100 * GRAIN_SCALE);
           inst.grain = true;
         }
       }
@@ -1102,6 +1299,52 @@
           fx('dust', { name: 'Golden motes', color: '#ffe6aa', intensity: 26, opacity: 70 }),
           fx('vignette', { intensity: 42, color: '#100806' }),
           fx('grain', { intensity: 25 })
+        ]
+      },
+      'Cozy Hearth': {
+        base: '#120806',
+        layers: [
+          col({ name: 'Firelit room', mode: 'radial', colors: ['#5a2310', '#26100a', '#0c0504'], cx: 50, cy: 105, rad: 95 }),
+          fx('godrays', { name: 'Glow from the hearth', color: '#ff9a4a', intensity: 22, originX: 50, spread: 70, opacity: 65 }),
+          fx('embers', { name: 'Rising embers', intensity: 48, size: 40 }),
+          fx('bokeh', { name: 'Fairy lights', color: '#ffd18a', color2: '#ff8a5a', intensity: 26, opacity: 60 }),
+          fx('dust', { name: 'Warm dust', color: '#ffd9a8', intensity: 28, opacity: 70 }),
+          fx('vignette', { intensity: 60, color: '#060202' }),
+          fx('grain', { intensity: 25 })
+        ]
+      },
+      'Northern Lights': {
+        base: '#040812',
+        layers: [
+          col({ name: 'Polar night', colors: ['#030612', '#08122a', '#0d2438'], angle: 180 }),
+          newLayer('classic', { name: 'Aurora', mode: 'aurora', colors: ['#040812', '#2dffb0', '#4f7bff', '#b05bff'], speed: 35, intensity: 78, opacity: 90 }),
+          fx('stars', { name: 'Stars', intensity: 55 }),
+          fx('snow', { name: 'Light flurries', intensity: 22, wind: 6, size: 28, opacity: 70 }),
+          fx('vignette', { intensity: 45, color: '#02040a' }),
+          fx('grain', { intensity: 20 })
+        ]
+      },
+      'Midnight Library': {
+        base: '#0d0905',
+        layers: [
+          col({ name: 'Wood and shadow', colors: ['#0b0704', '#22160d', '#3a2616'], angle: 170 }),
+          fx('godrays', { name: 'Lamp light', color: '#ffcf85', intensity: 40, originX: 78, spread: 44, opacity: 80 }),
+          fx('dust', { name: 'Floating dust', color: '#ffe3b5', intensity: 52 }),
+          fx('mist', { name: 'Warm haze', color: '#d9a066', intensity: 16, wind: 5, opacity: 50 }),
+          fx('vignette', { intensity: 58, color: '#070402' }),
+          fx('grain', { intensity: 25 })
+        ]
+      },
+      'Deep Ocean': {
+        base: '#020b14',
+        layers: [
+          col({ name: 'Abyss', colors: ['#03101c', '#04233a', '#0a4a5e'], angle: 0 }),
+          fx('godrays', { name: 'Surface light', color: '#6fd8ff', intensity: 34, originX: 40, spread: 60, opacity: 70 }),
+          fx('mist', { name: 'Currents', color: '#4fb7d6', intensity: 24, wind: 12, opacity: 60 }),
+          fx('fireflies', { name: 'Plankton', color: '#8ffff0', intensity: 34, size: 26, opacity: 80 }),
+          fx('bokeh', { name: 'Distant glow', color: '#2aa8d6', color2: '#6a5cff', intensity: 20, opacity: 45 }),
+          fx('vignette', { intensity: 55, color: '#01060c' }),
+          fx('grain', { intensity: 22 })
         ]
       }
     };
